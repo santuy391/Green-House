@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Tanaman | Greenhouse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #f4f7f2; }
+        .navbar-brand { font-weight: bold; color: #2c7a47 !important; }
+        .card-header { background-color: #2c7a47; color: white; }
+        .btn-green { background-color: #2c7a47; color: white; }
+        .btn-green:hover { background-color: #1e5a36; }
+        .plant-card { transition: 0.2s; cursor: pointer; }
+        .plant-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .status-aktif { color: green; font-weight: bold; }
+        .status-panen { color: orange; }
+        .status-mati { color: red; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="index.html"><i class="fas fa-leaf"></i> Greenhouse System</a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="index.html">Dashboard</a>
+            <a class="nav-link active" href="plant_management.html">Manajemen Tanaman</a>
+            <a class="nav-link" href="simulator.html">Simulator</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="fas fa-seedling me-2"></i> Manajemen Tanaman Greenhouse</h2>
+
+    <button class="btn btn-green mb-3" data-bs-toggle="modal" data-bs-target="#plantModal" onclick="resetPlantForm()"><i class="fas fa-plus"></i> Tanaman Baru</button>
+
+    <div class="row" id="plantsContainer"></div>
+
+    <!-- Modal Tanaman -->
+    <div class="modal fade" id="plantModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Form Tanaman</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="plantForm">
+                        <input type="hidden" id="plantId">
+                        <div class="mb-2"><label>Nama Tanaman</label><input type="text" id="plantName" class="form-control" required></div>
+                        <div class="mb-2"><label>Varietas</label><input type="text" id="plantVariety" class="form-control"></div>
+                        <div class="mb-2"><label>Tanggal Tanam</label><input type="date" id="plantingDate" class="form-control" required></div>
+                        <div class="mb-2"><label>Lokasi</label><input type="text" id="plantLocation" class="form-control" placeholder="Rak A, Lantai 1"></div>
+                        <div class="mb-2"><label>Status</label>
+                            <select id="plantStatus" class="form-control">
+                                <option value="aktif">Aktif</option>
+                                <option value="panen">Panen</option>
+                                <option value="mati">Mati</option>
+                            </select>
+                        </div>
+                        <div class="mb-2"><label>Catatan</label><textarea id="plantNotes" class="form-control" rows="2"></textarea></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-success" onclick="savePlant()">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Tanaman -->
+    <div class="modal fade" id="detailModal" tabindex="-1" style="--bs-modal-width: 800px;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="detailTitle">Detail Tanaman</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="plantTab" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#growthTab">📈 Pertumbuhan</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tasksTab">📋 Tugas</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#infoTab">ℹ️ Info</button></li>
+                    </ul>
+                    <div class="tab-content mt-3">
+                        <div class="tab-pane fade show active" id="growthTab">
+                            <button class="btn btn-sm btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#growthLogModal" onclick="setGrowthPlantId()"><i class="fas fa-plus"></i> Tambah Catatan</button>
+                            <canvas id="growthChart" width="400" height="200" style="max-height: 250px;"></canvas>
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm table-bordered">
+                                    <thead><tr><th>Tanggal</th><th>Tinggi (cm)</th><th>Daun</th><th>Kesehatan</th><th>Catatan</th><th>Aksi</th></tr></thead>
+                                    <tbody id="growthLogsTable"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tasksTab">
+                            <button class="btn btn-sm btn-warning mb-2" data-bs-toggle="modal" data-bs-target="#taskModal" onclick="setTaskPlantId()"><i class="fas fa-plus"></i> Tambah Tugas</button>
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Jenis</th><th>Jadwal</th><th>Status</th><th>Catatan</th><th>Aksi</th></tr></thead>
+                                <tbody id="tasksTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="tab-pane fade" id="infoTab">
+                            <p><strong>Varietas:</strong> <span id="infoVariety"></span></p>
+                            <p><strong>Tanggal Tanam:</strong> <span id="infoPlantingDate"></span></p>
+                            <p><strong>Lokasi:</strong> <span id="infoLocation"></span></p>
+                            <p><strong>Status:</strong> <span id="infoStatus"></span></p>
+                            <p><strong>Catatan:</strong> <span id="infoNotes"></span></p>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPlant()">Hapus Tanaman</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Growth Log -->
+    <div class="modal fade" id="growthLogModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Tambah Catatan Pertumbuhan</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" id="logPlantId">
+                    <div class="mb-2"><label>Tanggal</label><input type="date" id="logDate" class="form-control" required></div>
+                    <div class="mb-2"><label>Tinggi (cm)</label><input type="number" step="0.1" id="logHeight" class="form-control"></div>
+                    <div class="mb-2"><label>Jumlah Daun</label><input type="number" id="logLeafCount" class="form-control"></div>
+                    <div class="mb-2"><label>Kesehatan</label>
+                        <select id="logHealth" class="form-control">
+                            <option value="sehat">Sehat</option>
+                            <option value="stress">Stress</option>
+                            <option value="hama">Hama</option>
+                            <option value="penyakit">Penyakit</option>
+                        </select>
+                    </div>
+                    <div class="mb-2"><label>Catatan</label><textarea id="logNotes" class="form-control"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button class="btn btn-primary" onclick="saveGrowthLog()">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Task -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Tambah Tugas Perawatan</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" id="taskPlantId">
+                    <div class="mb-2"><label>Jenis Tugas</label>
+                        <select id="taskType" class="form-control">
+                            <option value="pupuk">Pupuk</option>
+                            <option value="pestisida">Pestisida</option>
+                            <option value="penyiraman">Penyiraman</option>
+                            <option value="pruning">Pemangkasan</option>
+                            <option value="panen">Panen</option>
+                        </select>
+                    </div>
+                    <div class="mb-2"><label>Tanggal Jadwal</label><input type="date" id="taskDate" class="form-control" required></div>
+                    <div class="mb-2"><label>Catatan</label><textarea id="taskNotes" class="form-control"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button class="btn btn-primary" onclick="saveTask()">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ===================== KONFIGURASI =====================
+// >>>>>> GANTI URL INI DENGAN WEB APP ANDA <<<<<<
+const API_BASE = 'https://script.google.com/macros/s/AKfycbzyvOG80fgL2SgzV_5JFQXkp0XqcufhrrRix3YnKXEhavA-dVB2hv3DwYhIxnNQw7AT/exec';
+// =======================================================
+
+let currentPlantId = null;
+let growthChart = null;
+
+function loadPlants() {
+    $.get(API_BASE + '?action=get_plants', function(res) {
+        if (res.success) {
+            let html = '';
+            res.data.forEach(plant => {
+                let statusClass = plant.status === 'aktif' ? 'status-aktif' : (plant.status === 'panen' ? 'status-panen' : 'status-mati');
+                html += `
+                    <div class="col-md-4 mb-3">
+                        <div class="card plant-card h-100" onclick="showDetail(${plant.id})">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-seedling"></i> ${escapeHtml(plant.name)}</h5>
+                                <p class="card-text small">${plant.variety ? plant.variety : '-'}<br>
+                                Tanam: ${plant.planting_date}<br>
+                                Lokasi: ${plant.location || '-'}<br>
+                                <span class="${statusClass}">${plant.status.toUpperCase()}</span></p>
+                            </div>
+                            <div class="card-footer bg-transparent d-flex justify-content-between">
+                                <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editPlant(${plant.id})"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deletePlant(${plant.id})"><i class="fas fa-trash"></i> Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            $('#plantsContainer').html(html || '<div class="col-12">Belum ada tanaman. Klik "Tanaman Baru".</div>');
+        }
+    });
+}
+
+function resetPlantForm() {
+    $('#plantId').val('');
+    $('#plantName').val('');
+    $('#plantVariety').val('');
+    $('#plantingDate').val('');
+    $('#plantLocation').val('');
+    $('#plantStatus').val('aktif');
+    $('#plantNotes').val('');
+}
+function editPlant(id) {
+    $.get(API_BASE + '?action=get_plants', function(res) {
+        let plant = res.data.find(p => p.id == id);
+        if (plant) {
+            $('#plantId').val(plant.id);
+            $('#plantName').val(plant.name);
+            $('#plantVariety').val(plant.variety);
+            $('#plantingDate').val(plant.planting_date);
+            $('#plantLocation').val(plant.location);
+            $('#plantStatus').val(plant.status);
+            $('#plantNotes').val(plant.notes);
+            $('#plantModal').modal('show');
+        }
+    });
+}
+function savePlant() {
+    let id = $('#plantId').val();
+    let formData = {
+        action: id ? 'update_plant' : 'add_plant',
+        name: $('#plantName').val(),
+        variety: $('#plantVariety').val(),
+        planting_date: $('#plantingDate').val(),
+        location: $('#plantLocation').val(),
+        status: $('#plantStatus').val(),
+        notes: $('#plantNotes').val()
+    };
+    if (id) formData.id = id;
+    $.post(API_BASE, formData, function(res) {
+        if (res.success) { $('#plantModal').modal('hide'); loadPlants(); }
+        else alert('Gagal menyimpan tanaman');
+    }, 'json');
+}
+function deletePlant(id) {
+    if (confirm('Hapus tanaman ini?')) {
+        $.post(API_BASE, { action: 'delete_plant', id: id }, function(res) {
+            if (res.success) loadPlants(); else alert('Gagal hapus');
+        }, 'json');
+    }
+}
+function deleteCurrentPlant() {
+    if (currentPlantId && confirm('Hapus tanaman ini?')) {
+        $.post(API_BASE, { action: 'delete_plant', id: currentPlantId }, function(res) {
+            if (res.success) { $('#detailModal').modal('hide'); loadPlants(); }
+            else alert('Gagal');
+        });
+    }
+}
+
+function showDetail(plantId) {
+    currentPlantId = plantId;
+    $.get(API_BASE + '?action=get_plants', function(res) {
+        let plant = res.data.find(p => p.id == plantId);
+        if (plant) {
+            $('#detailTitle').text(`Detail: ${plant.name}`);
+            $('#infoVariety').text(plant.variety || '-');
+            $('#infoPlantingDate').text(plant.planting_date);
+            $('#infoLocation').text(plant.location || '-');
+            $('#infoStatus').html(`<span class="status-${plant.status}">${plant.status.toUpperCase()}</span>`);
+            $('#infoNotes').text(plant.notes || '-');
+        }
+    });
+    loadGrowthLogs(plantId);
+    loadTasks(plantId);
+    $('#detailModal').modal('show');
+}
+
+function loadGrowthLogs(plantId) {
+    $.get(API_BASE + '?action=get_growth_logs&plant_id=' + plantId, function(res) {
+        if (res.success) {
+            let logs = res.data;
+            let html = '';
+            logs.forEach(log => {
+                html += `<tr>
+                    <td>${log.log_date}</td><td>${log.height_cm ?? '-'}</td><td>${log.leaf_count ?? '-'}</td>
+                    <td>${log.health_status}</td><td>${log.notes || '-'}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="deleteGrowthLog(${log.id})">Hapus</button></td>
+                </tr>`;
+            });
+            $('#growthLogsTable').html(html);
+
+            let dates = logs.map(l => l.log_date);
+            let heights = logs.map(l => l.height_cm ? parseFloat(l.height_cm) : null);
+            if (growthChart) growthChart.destroy();
+            let ctx = document.getElementById('growthChart').getContext('2d');
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: dates, datasets: [{ label: 'Tinggi (cm)', data: heights, borderColor: '#2c7a47', fill: false }] },
+                options: { responsive: true, maintainAspectRatio: true }
+            });
+        }
+    });
+}
+function setGrowthPlantId() { $('#logPlantId').val(currentPlantId); $('#logDate').val(new Date().toISOString().slice(0,10)); }
+function saveGrowthLog() {
+    let data = {
+        action: 'add_growth_log',
+        plant_id: $('#logPlantId').val(),
+        log_date: $('#logDate').val(),
+        height_cm: $('#logHeight').val(),
+        leaf_count: $('#logLeafCount').val(),
+        health_status: $('#logHealth').val(),
+        notes: $('#logNotes').val()
+    };
+    $.post(API_BASE, data, function(res) {
+        if (res.success) {
+            $('#growthLogModal').modal('hide');
+            loadGrowthLogs(currentPlantId);
+            $('#logHeight').val(''); $('#logLeafCount').val(''); $('#logNotes').val('');
+        } else alert('Gagal');
+    }, 'json');
+}
+function deleteGrowthLog(id) {
+    if (confirm('Hapus catatan ini?')) {
+        $.post(API_BASE, { action: 'delete_growth_log', id: id }, function(res) {
+            if (res.success) loadGrowthLogs(currentPlantId);
+        }, 'json');
+    }
+}
+
+function loadTasks(plantId) {
+    $.get(API_BASE + '?action=get_tasks&plant_id=' + plantId, function(res) {
+        if (res.success) {
+            let html = '';
+            res.data.forEach(task => {
+                let completedBadge = task.completed ? '<span class="badge bg-success">Selesai</span>' : '<span class="badge bg-warning">Belum</span>';
+                html += `<tr>
+                    <td>${task.task_type}</td><td>${task.scheduled_date}</td><td>${completedBadge}</td>
+                    <td>${task.notes || '-'}</td>
+                    <td>
+                        ${!task.completed ? `<button class="btn btn-sm btn-success" onclick="completeTask(${task.id})"><i class="fas fa-check"></i></button>` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+            $('#tasksTable').html(html);
+        }
+    });
+}
+function setTaskPlantId() { $('#taskPlantId').val(currentPlantId); $('#taskDate').val(new Date().toISOString().slice(0,10)); }
+function saveTask() {
+    let data = {
+        action: 'add_task',
+        plant_id: $('#taskPlantId').val(),
+        task_type: $('#taskType').val(),
+        scheduled_date: $('#taskDate').val(),
+        notes: $('#taskNotes').val()
+    };
+    $.post(API_BASE, data, function(res) {
+        if (res.success) {
+            $('#taskModal').modal('hide');
+            loadTasks(currentPlantId);
+            $('#taskNotes').val('');
+        } else alert('Gagal');
+    }, 'json');
+}
+function completeTask(id) {
+    $.post(API_BASE, { action: 'complete_task', id: id }, function(res) {
+        if (res.success) loadTasks(currentPlantId);
+    }, 'json');
+}
+function deleteTask(id) {
+    if (confirm('Hapus tugas ini?')) {
+        $.post(API_BASE, { action: 'delete_task', id: id }, function(res) {
+            if (res.success) loadTasks(currentPlantId);
+        }, 'json');
+    }
+}
+
+function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
+loadPlants();
+</script>
+</body>
+</html>
