@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Greenhouse Pro Simulator | HMI Lengkap</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b2f 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 1.5rem;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.light-mode {
+            background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 100%);
+            color: #0f172a;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        body.light-mode .glass-card {
+            background: rgba(255,255,255,0.7);
+            border-color: rgba(0,0,0,0.1);
+        }
+        .btn-sim {
+            border-radius: 2rem;
+            padding: 0.5rem 1.2rem;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .value-glow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0ea5e9, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .status-led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.4; transform: scale(0.8);}
+            100% { opacity: 1; transform: scale(1.2);}
+        }
+        .range-slider { width: 100%; accent-color: #0ea5e9; }
+        .badge-custom { background: rgba(14,165,233,0.2); border-radius: 30px; padding: 0.3rem 0.8rem; font-size: 0.7rem; font-weight: 500; }
+        .pump-indicator { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+        .pump-run { background-color: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1s infinite; }
+        .pump-stop { background-color: #475569; }
+        .flow-text { font-family: monospace; font-size: 1.4rem; font-weight: bold; color: #0ea5e9; }
+        .btn-outline-emerald { color: #10b981; border-color: #10b981; }
+        .btn-outline-emerald:hover { background-color: #10b981; color: #fff; }
+        .btn-emerald { background-color: #10b981; color: #fff; border-color: #10b981; }
+    </style>
+</head>
+<body>
+<div class="container-fluid px-0 px-md-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h1 class="display-6 fw-bold"><i class="fas fa-leaf me-2 text-info"></i>Greenhouse Control Studio</h1>
+            <p class="text-muted">Real-time HMI | Mode XAMPP / Auto / Manual | Setpoint DB | Simulasi 24 Jam</p>
+        </div>
+        <div>
+            <button id="darkModeToggle" class="btn btn-outline-light rounded-circle p-2"><i class="fas fa-moon"></i></button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Kiri: Kontrol -->
+        <div class="col-lg-5">
+            <div class="glass-card p-4 h-100">
+                <h5 class="mb-3"><i class="fas fa-microchip me-2 text-info"></i>Mode Operasi</h5>
+                <div class="d-flex gap-2 mb-4 flex-wrap">
+                    <button id="modeXamppBtn" class="btn btn-outline-emerald btn-sim">🌐 XAMPP (Live DB)</button>
+                    <button id="modeAutoBtn" class="btn btn-primary btn-sim">🤖 AUTO (MCU)</button>
+                    <button id="modeManualBtn" class="btn btn-outline-warning btn-sim">🖐️ MANUAL</button>
+                </div>
+                <div id="manualControlPanel" class="mb-4" style="display: none;">
+                    <label class="form-label">Override Pompa</label>
+                    <div class="d-flex gap-2">
+                        <button id="btnPumpOn" class="btn btn-success btn-sm flex-fill"><i class="fas fa-play"></i> HIDUPKAN</button>
+                        <button id="btnPumpOff" class="btn btn-danger btn-sm flex-fill"><i class="fas fa-stop"></i> MATIKAN</button>
+                    </div>
+                </div>
+
+                <h5 class="mb-2"><i class="fas fa-sliders-h me-2"></i>Setpoint (Auto Mode)</h5>
+                <div id="setpointPanel">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between"><span>🌡️ Target Suhu</span><span id="setpointTempVal" class="fw-bold">30.0</span> °C</div>
+                        <input type="range" id="setpointTempSlider" class="range-slider" min="15" max="40" step="0.5" value="30">
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between"><span>💧 Target Kelembapan</span><span id="setpointHumVal" class="fw-bold">65</span> %</div>
+                        <input type="range" id="setpointHumSlider" class="range-slider" min="40" max="90" step="5" value="65">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-tachometer-alt"></i> Simulasi Siklus 24 Jam</span>
+                        <button id="autoCycleBtn" class="btn btn-sm btn-outline-light"><i class="fas fa-play"></i> Mulai Siklus</button>
+                    </div>
+                    <div id="simTimeDisplay" class="text-center text-muted mt-1" style="font-size:0.8rem; display:none;">Simulasi: 00:00</div>
+                </div>
+
+                <hr class="my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-water"></i> LS-1 (Tandon Air)</span>
+                    <button id="btnLs" class="btn btn-sm btn-outline-secondary">Toggle Status</button>
+                </div>
+                <div id="waterStatusText" class="small text-brand-400 mt-1">STATUS: OK (WATER DETECTED)</div>
+
+                <hr class="my-3">
+                <h6><i class="fas fa-calculator"></i> Kalkulator Misting</h6>
+                <div class="row g-2 small">
+                    <div class="col-4"><label>Nozzles</label><input type="number" id="calcNozzles" class="form-control form-control-sm" value="8"></div>
+                    <div class="col-4"><label>Flow (L/min)</label><input type="number" step="0.1" id="calcFlow" class="form-control form-control-sm" value="0.12"></div>
+                    <div class="col-4"><label>Durasi (menit)</label><input type="number" id="calcDuration" class="form-control form-control-sm" value="2"></div>
+                    <div class="col-6">Total Air: <span id="calcTotal" class="fw-bold">0.0</span> L</div>
+                    <div class="col-6">Estimasi (200L): <span id="calcDays" class="fw-bold">~</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kanan: Data & Grafik -->
+        <div class="col-lg-7">
+            <div class="glass-card p-4">
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="bg-dark bg-opacity-25 rounded-3 p-2">
+                            <i class="fas fa-thermometer-half fa-2x text-danger"></i>
+                            <div class="value-glow" id="liveTemp">-- °C</div>
+                            <small>Suhu Saat Ini</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark bg-opacity-25 rounded-3 p-2">
+                            <i class="fas fa-tint fa-2x text-info"></i>
+                            <div class="value-glow" id="liveHum">-- %</div>
+                            <small>Kelembapan</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6 d-flex align-items-center gap-2">
+                        <span class="pump-indicator" id="pumpLed"></span>
+                        <span id="pumpStateText" class="fw-bold fs-4">STOP</span>
+                        <span class="ms-auto">Flow: <span id="flowRateText" class="flow-text">0.00</span> L/min</span>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div id="criticalIndicator" class="badge bg-danger" style="display:none;">⚠️ KRITIS</div>
+                    </div>
+                </div>
+                <canvas id="trendChart" width="400" height="200" style="max-height: 220px;"></canvas>
+                <div class="d-flex justify-content-between mt-2">
+                    <span><i class="fas fa-chart-line text-success"></i> Suhu (hijau)</span>
+                    <span><i class="fas fa-chart-line text-info"></i> Kelembapan (biru)</span>
+                    <span><i class="fas fa-chart-area text-sky-300"></i> Area = Pompa ON</span>
+                    <button id="exportCsvBtn" class="btn btn-sm btn-outline-light"><i class="fas fa-download"></i> CSV</button>
+                </div>
+
+                <div class="mt-3 bg-black bg-opacity-25 rounded p-2" style="font-family:monospace; font-size:0.7rem;">
+                    <div id="logT">> Suhu: --</div>
+                    <div id="logH">> Hum: --</div>
+                    <div id="logAction">> Sistem siap. Pilih mode.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===================== KONFIGURASI =====================
+// >>>>>> GANTI URL INI DENGAN WEB APP ANDA <<<<<<
+const API_BASE = 'https://script.google.com/macros/s/AKfycbzyvOG80fgL2SgzV_5JFQXkp0XqcufhrrRix3YnKXEhavA-dVB2hv3DwYhIxnNQw7AT/exec';
+// =======================================================
+
+let isWaterAvailable = true;
+let isManualMode = false;
+let isXamppMode = false;
+let manualPumpOverrideState = false;
+let isCycleRunning = false;
+let cycleTimeMinutes = 480;
+let cycleInterval = null;
+let lastNotificationTime = 0;
+let notificationPermissionGranted = false;
+let tempSetpoint = 30.0;
+let humSetpoint = 65;
+
+const maxDataPoints = 30;
+let trendTemp = Array(maxDataPoints).fill(28);
+let trendHum = Array(maxDataPoints).fill(65);
+let trendPump = Array(maxDataPoints).fill(0);
+let chart;
+
+const inTemp = { value: 28 };
+const inHum = { value: 65 };
+
+const setpointTempSlider = $('#setpointTempSlider');
+const setpointHumSlider = $('#setpointHumSlider');
+const setpointTempVal = $('#setpointTempVal');
+const setpointHumVal = $('#setpointHumVal');
+const modeXamppBtn = $('#modeXamppBtn');
+const modeAutoBtn = $('#modeAutoBtn');
+const modeManualBtn = $('#modeManualBtn');
+const manualControlPanel = $('#manualControlPanel');
+const btnPumpOn = $('#btnPumpOn');
+const btnPumpOff = $('#btnPumpOff');
+const btnLs = $('#btnLs');
+const waterStatusText = $('#waterStatusText');
+const pumpLed = $('#pumpLed');
+const pumpStateText = $('#pumpStateText');
+const flowRateText = $('#flowRateText');
+const liveTemp = $('#liveTemp');
+const liveHum = $('#liveHum');
+const criticalIndicator = $('#criticalIndicator');
+const logT = $('#logT');
+const logH = $('#logH');
+const logAction = $('#logAction');
+const autoCycleBtn = $('#autoCycleBtn');
+const simTimeDisplay = $('#simTimeDisplay');
+const exportCsvBtn = $('#exportCsvBtn');
+const calcNozzles = $('#calcNozzles');
+const calcFlow = $('#calcFlow');
+const calcDuration = $('#calcDuration');
+const calcTotal = $('#calcTotal');
+const calcDays = $('#calcDays');
+const setpointPanel = $('#setpointPanel');
+
+if ("Notification" in window) {
+    Notification.requestPermission().then(perm => { notificationPermissionGranted = (perm === "granted"); });
+}
+function showNotification(title, body) {
+    if (notificationPermissionGranted && (Date.now() - lastNotificationTime > 60000)) {
+        new Notification(title, { body });
+        lastNotificationTime = Date.now();
+    }
+}
+
+async function loadSetpointsFromDB() {
+    try {
+        const response = await fetch(API_BASE + '?action=get_settings');
+        const data = await response.json();
+        if (data.success && data.data) {
+            tempSetpoint = parseFloat(data.data.temp_setpoint);
+            humSetpoint = parseInt(data.data.hum_setpoint);
+            setpointTempSlider.val(tempSetpoint);
+            setpointHumSlider.val(humSetpoint);
+            setpointTempVal.text(tempSetpoint.toFixed(1));
+            setpointHumVal.text(humSetpoint);
+        }
+    } catch(e) { console.error(e); }
+}
+async function saveSetpointsToDB(temp, hum) {
+    try {
+        const params = new URLSearchParams();
+        params.append('action', 'update_settings');
+        params.append('temp_setpoint', temp);
+        params.append('hum_setpoint', hum);
+        await fetch(API_BASE, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
+    } catch(e) { console.error(e); }
+}
+
+function setWaterStatus(available) {
+    isWaterAvailable = available;
+    if (available) {
+        waterStatusText.html('STATUS: OK (WATER DETECTED)').removeClass('text-danger').addClass('text-brand-400');
+    } else {
+        waterStatusText.html('STATUS: FAULT (TANK EMPTY)').removeClass('text-brand-400').addClass('text-danger');
+    }
+    runControlLogic();
+}
+
+function initChart() {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(maxDataPoints).fill(''),
+            datasets: [
+                { label: 'Suhu (°C)', data: trendTemp, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)', tension: 0.2, fill: false, pointRadius: 2 },
+                { label: 'Kelembapan (%)', data: trendHum, borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.05)', tension: 0.2, fill: false, pointRadius: 2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { labels: { color: '#cbd5e1' } } }
+        }
+    });
+}
+function appendTrendData(t, h, p) {
+    trendTemp.shift(); trendTemp.push(t);
+    trendHum.shift(); trendHum.push(h);
+    trendPump.shift(); trendPump.push(p ? 1 : 0);
+    if (chart) {
+        chart.data.datasets[0].data = trendTemp;
+        chart.data.datasets[1].data = trendHum;
+        chart.update();
+    }
+}
+
+function runControlLogic() {
+    const t = parseFloat(inTemp.value);
+    const h = parseInt(inHum.value);
+    liveTemp.html(`${t.toFixed(1)} °C`);
+    liveHum.html(`${h} %`);
+    logT.html(`> Suhu: ${t.toFixed(1)} °C`);
+    logH.html(`> Hum: ${h} %`);
+
+    let pumpState = false;
+    let logMsg = "";
+    let isCritical = false;
+
+    if (!isWaterAvailable) {
+        pumpState = false;
+        logMsg = '<span class="text-red-400">> INST_FAULT: Air Tandon Habis. Proteksi Dry-run aktif.</span>';
+    } else {
+        if (isManualMode) {
+            pumpState = manualPumpOverrideState;
+            logMsg = pumpState ? '<span class="text-sky-400">> MANUAL: Pompa DIHIDUPKAN (Override)</span>' : '<span class="text-slate-400">> MANUAL: Pompa DIMATIKAN</span>';
+        } else if (isXamppMode) {
+            if (t > 30.0 || h < 65) {
+                pumpState = true;
+                logMsg = '<span class="text-emerald-400">> XAMPP: Kondisi tidak ideal, Pompa menyala.</span>';
+                isCritical = true;
+            } else {
+                pumpState = false;
+                logMsg = '<span class="text-emerald-500">> XAMPP: Kondisi ideal, Pompa standby.</span>';
+            }
+        } else {
+            if (t > tempSetpoint || h < humSetpoint) {
+                pumpState = true;
+                isCritical = true;
+                let reasons = [];
+                if (t > tempSetpoint) reasons.push(`Suhu > ${tempSetpoint}°C`);
+                if (h < humSetpoint) reasons.push(`Kelembapan < ${humSetpoint}%`);
+                logMsg = `<span class="text-brand-400">> AUTO: Pompa AKTIF (${reasons.join(' & ')})</span>`;
+            } else {
+                pumpState = false;
+                logMsg = '<span class="text-slate-400">> AUTO: Kondisi aman, Pompa mati.</span>';
+            }
+        }
+    }
+
+    if (pumpState) {
+        pumpLed.removeClass('pump-stop').addClass('pump-run');
+        pumpStateText.text('RUN').removeClass('text-slate-500').addClass('text-white');
+        flowRateText.text('0.80');
+        if (isCritical && !isManualMode && !isXamppMode) {
+            showNotification("⚠️ Kondisi Kritis Greenhouse", `Suhu ${t.toFixed(1)}°C | Kelembapan ${h}%. Pompa aktif.`);
+        }
+        criticalIndicator.css('display', 'inline-block');
+    } else {
+        pumpLed.removeClass('pump-run').addClass('pump-stop');
+        pumpStateText.text('STOP').removeClass('text-white').addClass('text-slate-500');
+        flowRateText.text('0.00');
+        criticalIndicator.css('display', 'none');
+    }
+
+    logAction.html(logMsg);
+    appendTrendData(t, h, pumpState);
+}
+
+async function fetchXamppData() {
+    if (!isXamppMode) return;
+    try {
+        const response = await fetch(API_BASE); // GET tanpa action
+        const data = await response.json();
+        if (data.success && data.data) {
+            inTemp.value = parseFloat(data.data.suhu);
+            inHum.value = parseInt(data.data.kelembapan);
+            const tandonKosong = (parseInt(data.data.air_habis) === 1);
+            setWaterStatus(!tandonKosong);
+            runControlLogic();
+        }
+    } catch(e) {
+        console.error(e);
+        logAction.html('<span class="text-red-400">> ERROR: Gagal koneksi ke API XAMPP</span>');
+    }
+}
+setInterval(fetchXamppData, 3000);
+
+setpointTempSlider.on('input', (e) => {
+    tempSetpoint = parseFloat(e.target.value);
+    setpointTempVal.text(tempSetpoint.toFixed(1));
+    saveSetpointsToDB(tempSetpoint, humSetpoint);
+    if (!isXamppMode && !isManualMode) runControlLogic();
+});
+setpointHumSlider.on('input', (e) => {
+    humSetpoint = parseInt(e.target.value);
+    setpointHumVal.text(humSetpoint);
+    saveSetpointsToDB(tempSetpoint, humSetpoint);
+    if (!isXamppMode && !isManualMode) runControlLogic();
+});
+
+function setUIMode() {
+    const disable = isXamppMode;
+    setpointPanel.css('opacity', disable ? '0.5' : '1');
+    setpointPanel.css('pointer-events', disable ? 'none' : 'auto');
+}
+modeXamppBtn.on('click', () => {
+    isXamppMode = true; isManualMode = false;
+    if (isCycleRunning) toggleAutoCycle();
+    modeXamppBtn.removeClass('btn-outline-emerald').addClass('btn-emerald');
+    modeAutoBtn.removeClass('btn-primary').addClass('btn-outline-primary');
+    modeManualBtn.removeClass('btn-warning').addClass('btn-outline-warning');
+    manualControlPanel.hide();
+    setUIMode();
+    fetchXamppData();
+    runControlLogic();
+});
+modeAutoBtn.on('click', () => {
+    isXamppMode = false; isManualMode = false;
+    modeAutoBtn.removeClass('btn-outline-primary').addClass('btn-primary');
+    modeXamppBtn.removeClass('btn-emerald').addClass('btn-outline-emerald');
+    modeManualBtn.removeClass('btn-warning').addClass('btn-outline-warning');
+    manualControlPanel.hide();
+    setUIMode();
+    runControlLogic();
+});
+modeManualBtn.on('click', () => {
+    isXamppMode = false; isManualMode = true;
+    if (isCycleRunning) toggleAutoCycle();
+    modeManualBtn.removeClass('btn-outline-warning').addClass('btn-warning');
+    modeAutoBtn.removeClass('btn-primary').addClass('btn-outline-primary');
+    modeXamppBtn.removeClass('btn-emerald').addClass('btn-outline-emerald');
+    manualControlPanel.show();
+    setUIMode();
+    runControlLogic();
+});
+btnPumpOn.on('click', () => { if (isManualMode) { manualPumpOverrideState = true; runControlLogic(); } });
+btnPumpOff.on('click', () => { if (isManualMode) { manualPumpOverrideState = false; runControlLogic(); } });
+btnLs.on('click', () => { if (!isXamppMode) { setWaterStatus(!isWaterAvailable); runControlLogic(); } });
+
+function toggleAutoCycle() {
+    isCycleRunning = !isCycleRunning;
+    if (isCycleRunning) {
+        modeAutoBtn.click();
+        autoCycleBtn.html('<i class="fas fa-pause"></i> Jeda Siklus');
+        simTimeDisplay.show();
+        if (cycleInterval) clearInterval(cycleInterval);
+        cycleInterval = setInterval(() => {
+            cycleTimeMinutes = (cycleTimeMinutes + 10) % 1440;
+            const hours = Math.floor(cycleTimeMinutes / 60);
+            const minutes = cycleTimeMinutes % 60;
+            simTimeDisplay.text(`Simulasi: ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`);
+            let targetTemp = 24.0, targetHum = 85;
+            if (hours >= 6 && hours < 12) {
+                const t = (hours - 6) / 6;
+                targetTemp = 24.0 + (33.0 - 24.0) * t;
+                targetHum = 85 - (55 - 85) * t;
+            } else if (hours >= 12 && hours < 16) {
+                const t = (hours - 12) / 4;
+                targetTemp = 33.0 + (36.0 - 33.0) * t;
+                targetHum = 55 + (45 - 55) * t;
+            } else if (hours >= 16 && hours < 19) {
+                const t = (hours - 16) / 3;
+                targetTemp = 36.0 - (28.0 - 36.0) * t;
+                targetHum = 45 - (70 - 45) * t;
+            } else {
+                targetTemp = 24.0;
+                targetHum = 85;
+            }
+            inTemp.value = (targetTemp + (Math.random() - 0.5)).toFixed(1);
+            inHum.value = Math.round(targetHum + (Math.random() - 0.5) * 4);
+            runControlLogic();
+        }, 400);
+    } else {
+        clearInterval(cycleInterval);
+        cycleInterval = null;
+        autoCycleBtn.html('<i class="fas fa-play"></i> Mulai Siklus');
+        simTimeDisplay.hide();
+    }
+}
+autoCycleBtn.on('click', toggleAutoCycle);
+
+exportCsvBtn.on('click', () => {
+    let csvRows = [["Index","Suhu (°C)","Kelembapan (%)","Status Pompa"]];
+    for (let i=0; i<maxDataPoints; i++) {
+        csvRows.push([i, trendTemp[i].toFixed(1), trendHum[i], trendPump[i] ? "AKTIF" : "OFF"]);
+    }
+    const csv = csvRows.map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], {type: "text/csv"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `greenhouse_trend_${new Date().toISOString().slice(0,19)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+function updateCalculator() {
+    let n = parseInt(calcNozzles.val()) || 0;
+    let f = parseFloat(calcFlow.val()) || 0;
+    let d = parseInt(calcDuration.val()) || 0;
+    let total = n * f * d;
+    calcTotal.text(total.toFixed(1));
+    calcDays.text(total>0 ? Math.floor(200/total)+" Hari" : "~");
+}
+calcNozzles.on('input', updateCalculator);
+calcFlow.on('input', updateCalculator);
+calcDuration.on('input', updateCalculator);
+updateCalculator();
+
+$('#darkModeToggle').on('click', () => {
+    $('body').toggleClass('light-mode');
+    const isLight = $('body').hasClass('light-mode');
+    $('#darkModeToggle').html(isLight ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>');
+    if (chart) {
+        chart.options.plugins.legend.labels.color = isLight ? '#0f172a' : '#cbd5e1';
+        chart.update();
+    }
+});
+
+initChart();
+loadSetpointsFromDB().then(() => {
+    setWaterStatus(true);
+    runControlLogic();
+});
+setpointTempSlider.val(tempSetpoint);
+setpointHumSlider.val(humSetpoint);
+setpointTempVal.text(tempSetpoint.toFixed(1));
+setpointHumVal.text(humSetpoint);
+modeAutoBtn.click();
+</script>
+</body>
+</html>
