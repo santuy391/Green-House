@@ -48,12 +48,12 @@
 <div class="container mt-4">
     <h2 class="text-center mb-2">🌿 Sistem Manajemen Greenhouse Otomatis</h2>
     
-    <!-- Waktu Real-time -->
+    <!-- Waktu & Tanggal Real-time -->
     <div class="text-center mb-4">
         <div class="datetime-badge" id="currentDateTime">Memuat waktu...</div>
     </div>
 
-    <!-- Card Status -->
+    <!-- Card status real-time -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card text-white bg-primary">
@@ -93,7 +93,7 @@
         </div>
     </div>
 
-    <!-- Setpoint -->
+    <!-- Form setpoint -->
     <div class="card mb-4">
         <div class="card-header">⚙️ Pengaturan Setpoint</div>
         <div class="card-body">
@@ -174,18 +174,39 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ============================================================
-//  KONFIGURASI: GANTI URL INI DENGAN WEB APP ANDA
-// ============================================================
-const API_BASE = 'https://script.google.com/macros/s/AKfycbwLsLhjP53JKq3WQX67QzdssJwtbOydB1vgVSpZb0w/dev';  // <-- Ganti dengan URL Web App
-// ============================================================
+// ==================== KONFIGURASI ====================
+const API_BASE = 'https://script.google.com/macros/s/AKfycbwLsLhjP53JKq3WQX67QzdssJwtbOydB1vgVSpZb0w/dev'; // GANTI DENGAN URL WEB APP ANDA
 
+// ==================== FUNGSI AJAX ====================
+function apiGet(action, params = {}) {
+    return new Promise((resolve, reject) => {
+        params.action = action;
+        $.get(API_BASE, params, function(res) {
+            resolve(res);
+        }).fail(reject);
+    });
+}
+
+function apiPost(action, data = {}) {
+    return new Promise((resolve, reject) => {
+        data.action = action;
+        $.ajax({
+            url: API_BASE,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            dataType: 'json',
+            success: resolve,
+            error: reject
+        });
+    });
+}
+
+// ==================== GLOBAL ====================
 let chart;
 let currentMode = 'auto', currentManualPump = 0;
 
-// Waktu real-time
 function updateDateTime() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
@@ -194,20 +215,19 @@ function updateDateTime() {
 setInterval(updateDateTime, 1000);
 updateDateTime();
 
-// Muat setpoint
+// ==================== LOAD DATA ====================
 function loadSetpoint() {
-    $.get(API_BASE + '?action=get_settings', function(res) {
-        if (res.success) {
+    apiGet('get_settings').then(res => {
+        if (res.success && res.data) {
             $('#temp_setpoint').val(res.data.temp_setpoint);
             $('#hum_setpoint').val(res.data.hum_setpoint);
             checkSafety();
         }
-    }).fail(() => alert('Gagal memuat setpoint. Periksa URL API_BASE.'));
+    }).catch(console.error);
 }
 
-// Muat data sensor terbaru
 function loadLatest() {
-    $.get(API_BASE + '?action=get_latest', function(res) {
+    apiGet('get_latest').then(res => {
         if (res.success && res.data) {
             $('#suhu').text(res.data.suhu + ' °C');
             $('#kelembapan').text(res.data.kelembapan + ' %');
@@ -217,10 +237,9 @@ function loadLatest() {
             $('#status_air').html(statusAir);
             checkSafety();
         }
-    }).fail(() => alert('Gagal memuat data sensor.'));
+    }).catch(console.error);
 }
 
-// Cek kondisi aman/tidak
 function checkSafety() {
     let suhu = parseFloat($('#suhu').text());
     let kelembapan = parseInt($('#kelembapan').text());
@@ -232,13 +251,12 @@ function checkSafety() {
     else $('#status_aman').html('<span class="badge badge-aman">✅ AMAN (Pompa MATI)</span>');
 }
 
-// Grafik
 function loadChart() {
-    $.get(API_BASE + '?action=get_logs&limit=100', function(res) {
+    apiGet('get_logs', { limit: 100 }).then(res => {
         if (res.success) {
             let labels = [], suhuData = [], humData = [];
             res.data.forEach(row => {
-                labels.push(row.created_at ? new Date(row.created_at).toLocaleTimeString() : '');
+                labels.push(new Date(row.created_at).toLocaleTimeString());
                 suhuData.push(row.suhu);
                 humData.push(row.kelembapan);
             });
@@ -246,50 +264,43 @@ function loadChart() {
             const ctx = document.getElementById('sensorChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
-                data: { labels, datasets: [
-                    { label: 'Suhu (°C)', data: suhuData, borderColor: 'red', fill: false, tension: 0.1 },
-                    { label: 'Kelembapan (%)', data: humData, borderColor: 'blue', fill: false, tension: 0.1 }
-                ]},
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Suhu (°C)', data: suhuData, borderColor: 'red', fill: false, tension: 0.1 },
+                        { label: 'Kelembapan (%)', data: humData, borderColor: 'blue', fill: false, tension: 0.1 }
+                    ]
+                },
                 options: { responsive: true, maintainAspectRatio: true }
             });
         }
-    }).fail(() => alert('Gagal memuat grafik.'));
+    }).catch(console.error);
 }
 
-// ===================== JADWAL (DIPERBAIKI) =====================
 function loadSchedules() {
-    $.get(API_BASE + '?action=get_schedules', function(res) {
-        console.log('Respons jadwal:', res); // Debug
+    apiGet('get_schedules').then(res => {
         if (res.success) {
             let html = '';
-            if (res.data.length === 0) {
-                html = '<tr><td colspan="4" class="text-center">Belum ada jadwal. Klik "Tambah Jadwal".</td></tr>';
-            } else {
-                res.data.forEach(s => {
-                    let waktu = s.waktu || '--:--';
-                    let durasi = s.durasi || 0;
-                    let aktif = s.aktif || 0;
-                    let statusBadge = aktif == 1 ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Nonaktif</span>';
-                    html += `<tr>
-                        <td>${waktu}</td>
-                        <td>${durasi} menit</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" onclick="editSchedule(${s.id},'${waktu}',${durasi},${aktif})">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteSchedule(${s.id})">Hapus</button>
-                        </td>
-                    </tr>`;
-                });
-            }
+            res.data.forEach(s => {
+                let statusBadge = s.aktif ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Nonaktif</span>';
+                html += `<tr><td>${s.waktu}</td><td>${s.durasi} menit</td><td>${statusBadge}</td><td><button class="btn btn-sm btn-warning" onclick="editSchedule(${s.id},'${s.waktu}',${s.durasi},${s.aktif})">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteSchedule(${s.id})">Hapus</button></td></tr>`;
+            });
             $('#scheduleList').html(html);
-        } else {
-            alert('Gagal memuat jadwal: ' + (res.message || ''));
         }
-    }).fail(function() {
-        alert('Gagal terhubung ke server. Periksa URL API_BASE.');
-    });
+    }).catch(console.error);
 }
 
+function loadControlMode() {
+    apiGet('get_control').then(res => {
+        if (res.success) {
+            currentMode = res.data.mode;
+            currentManualPump = parseInt(res.data.manual_pump_state);
+            updateManualUI();
+        }
+    }).catch(console.error);
+}
+
+// ==================== JADWAL ====================
 function openAddModal() {
     $('#schedule_id').val('');
     $('#waktu').val('');
@@ -297,6 +308,7 @@ function openAddModal() {
     $('#aktif').prop('checked', true);
     $('#scheduleModal').modal('show');
 }
+
 function editSchedule(id, waktu, durasi, aktif) {
     $('#schedule_id').val(id);
     $('#waktu').val(waktu);
@@ -304,14 +316,16 @@ function editSchedule(id, waktu, durasi, aktif) {
     $('#aktif').prop('checked', aktif == 1);
     $('#scheduleModal').modal('show');
 }
+
 function deleteSchedule(id) {
-    if (confirm('Yakin hapus jadwal ini?')) {
-        $.post(API_BASE, { action: 'delete_schedule', id: id }, function(res) {
+    if (confirm('Yakin hapus?')) {
+        apiPost('delete_schedule', { id: id }).then(res => {
             if (res.success) loadSchedules();
-            else alert('Gagal hapus jadwal.');
-        }, 'json');
+            else alert('Gagal');
+        }).catch(console.error);
     }
 }
+
 $('#scheduleForm').on('submit', function(e) {
     e.preventDefault();
     let id = $('#schedule_id').val();
@@ -319,26 +333,17 @@ $('#scheduleForm').on('submit', function(e) {
     let durasi = $('#durasi').val();
     let aktif = $('#aktif').is(':checked') ? 1 : 0;
     let action = id ? 'update_schedule' : 'add_schedule';
-    let postData = { action: action, waktu: waktu, durasi: durasi, aktif: aktif };
+    let postData = { action, waktu, durasi, aktif };
     if (id) postData.id = id;
-    $.post(API_BASE, postData, function(res) {
+    apiPost(action, postData).then(res => {
         if (res.success) {
             $('#scheduleModal').modal('hide');
             loadSchedules();
-        } else alert('Gagal menyimpan jadwal.');
-    }, 'json');
+        } else alert('Gagal');
+    }).catch(console.error);
 });
 
-// Kontrol mode
-function loadControlMode() {
-    $.get(API_BASE + '?action=get_control', function(res) {
-        if (res.success) {
-            currentMode = res.data.mode;
-            currentManualPump = parseInt(res.data.manual_pump_state);
-            updateManualUI();
-        }
-    }).fail(() => alert('Gagal memuat mode kontrol.'));
-}
+// ==================== KONTROL MANUAL ====================
 function updateManualUI() {
     if (currentMode === 'manual') {
         $('#mode-auto-btn').removeClass('active btn-primary').addClass('btn-outline-primary');
@@ -361,36 +366,40 @@ function updateManualUI() {
     }
     $('#current-mode-label').text(currentMode === 'auto' ? 'Auto (sensor)' : 'Manual (override)');
 }
+
 function setControlMode(mode, manualState = null) {
     let data = { action: 'set_control', mode: mode };
     if (manualState !== null) data.manual_pump_state = manualState;
-    $.post(API_BASE, data, function(res) {
+    apiPost('set_control', data).then(res => {
         if (res.success) {
             currentMode = mode;
             if (manualState !== null) currentManualPump = manualState;
             updateManualUI();
         } else alert('Gagal mengubah mode');
-    }, 'json');
+    }).catch(console.error);
 }
+
 $('#mode-auto-btn').click(() => setControlMode('auto', 0));
 $('#mode-manual-btn').click(() => setControlMode('manual', currentManualPump));
 $('#pump-on-btn').click(() => setControlMode('manual', 1));
 $('#pump-off-btn').click(() => setControlMode('manual', 0));
 
-// Simpan setpoint
+// ==================== SETPOINT ====================
 $('#form_setpoint').on('submit', function(e) {
     e.preventDefault();
     let temp = $('#temp_setpoint').val();
     let hum = $('#hum_setpoint').val();
-    $.post(API_BASE, { action: 'update_settings', temp_setpoint: temp, hum_setpoint: hum }, function(res) {
+    apiPost('update_settings', { temp_setpoint: temp, hum_setpoint: hum }).then(res => {
         if (res.success) {
             $('#setpoint_msg').html('<div class="alert alert-success">Setpoint disimpan</div>');
             setTimeout(() => $('#setpoint_msg').empty(), 2000);
-        } else $('#setpoint_msg').html('<div class="alert alert-danger">Gagal</div>');
-    }, 'json');
+        } else {
+            $('#setpoint_msg').html('<div class="alert alert-danger">Gagal</div>');
+        }
+    }).catch(console.error);
 });
 
-// Refresh semua
+// ==================== REFRESH ====================
 function refreshAll() {
     loadLatest();
     loadChart();
@@ -398,10 +407,11 @@ function refreshAll() {
     loadControlMode();
 }
 
-// Inisialisasi
 loadSetpoint();
 refreshAll();
 setInterval(refreshAll, 5000);
+
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
