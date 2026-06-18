@@ -61,20 +61,34 @@
             0% { opacity: 0.4; transform: scale(0.8);}
             100% { opacity: 1; transform: scale(1.2);}
         }
-        .range-slider { width: 100%; accent-color: #0ea5e9; }
-        .badge-custom { background: rgba(14,165,233,0.2); border-radius: 30px; padding: 0.3rem 0.8rem; font-size: 0.7rem; font-weight: 500; }
-        .pump-indicator { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+        .range-slider {
+            width: 100%;
+            accent-color: #0ea5e9;
+        }
+        .badge-custom {
+            background: rgba(14,165,233,0.2);
+            border-radius: 30px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        .pump-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+        }
         .pump-run { background-color: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1s infinite; }
         .pump-stop { background-color: #475569; }
         .flow-text { font-family: monospace; font-size: 1.4rem; font-weight: bold; color: #0ea5e9; }
-        .btn-outline-emerald { color: #10b981; border-color: #10b981; }
+        .btn-emerald { background-color: #10b981; color: #fff; }
+        .btn-emerald:hover { background-color: #059669; color: #fff; }
+        .btn-outline-emerald { border-color: #10b981; color: #10b981; }
         .btn-outline-emerald:hover { background-color: #10b981; color: #fff; }
-        .btn-emerald { background-color: #10b981; color: #fff; border-color: #10b981; }
     </style>
 </head>
 <body>
 <div class="container-fluid px-0 px-md-3">
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <div>
             <h1 class="display-6 fw-bold"><i class="fas fa-leaf me-2 text-info"></i>Greenhouse Control Studio</h1>
@@ -86,7 +100,7 @@
     </div>
 
     <div class="row g-4">
-        <!-- Kiri: Kontrol -->
+        <!-- Kolom Kiri -->
         <div class="col-lg-5">
             <div class="glass-card p-4 h-100">
                 <h5 class="mb-3"><i class="fas fa-microchip me-2 text-info"></i>Mode Operasi</h5>
@@ -142,7 +156,7 @@
             </div>
         </div>
 
-        <!-- Kanan: Data & Grafik -->
+        <!-- Kolom Kanan -->
         <div class="col-lg-7">
             <div class="glass-card p-4">
                 <div class="row text-center mb-3">
@@ -190,11 +204,31 @@
 </div>
 
 <script>
-// ===================== KONFIGURASI =====================
-// >>>>>> GANTI URL INI DENGAN WEB APP ANDA <<<<<<
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzyvOG80fgL2SgzV_5JFQXkp0XqcufhrrRix3YnKXEhavA-dVB2hv3DwYhIxnNQw7AT/exec';
-// =======================================================
+// ==================== KONFIGURASI API ====================
+const API_BASE = 'https://script.google.com/macros/s/AKfycbwLsLhjP53JKq3WQX67QzdssJwtbOydB1vgVSpZb0w/dev';
 
+function apiGet(action, params = {}) {
+    return new Promise((resolve, reject) => {
+        params.action = action;
+        $.get(API_BASE, params, function(res) { resolve(res); }).fail(reject);
+    });
+}
+function apiPost(action, data = {}) {
+    return new Promise((resolve, reject) => {
+        data.action = action;
+        $.ajax({
+            url: API_BASE,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            dataType: 'json',
+            success: resolve,
+            error: reject
+        });
+    });
+}
+
+// ==================== STATE ====================
 let isWaterAvailable = true;
 let isManualMode = false;
 let isXamppMode = false;
@@ -216,6 +250,7 @@ let chart;
 const inTemp = { value: 28 };
 const inHum = { value: 65 };
 
+// DOM
 const setpointTempSlider = $('#setpointTempSlider');
 const setpointHumSlider = $('#setpointHumSlider');
 const setpointTempVal = $('#setpointTempVal');
@@ -247,6 +282,7 @@ const calcTotal = $('#calcTotal');
 const calcDays = $('#calcDays');
 const setpointPanel = $('#setpointPanel');
 
+// Notifikasi
 if ("Notification" in window) {
     Notification.requestPermission().then(perm => { notificationPermissionGranted = (perm === "granted"); });
 }
@@ -257,10 +293,10 @@ function showNotification(title, body) {
     }
 }
 
+// ========== FUNGSI DB SETPOINT ==========
 async function loadSetpointsFromDB() {
     try {
-        const response = await fetch(API_BASE + '?action=get_settings');
-        const data = await response.json();
+        const data = await apiGet('get_settings');
         if (data.success && data.data) {
             tempSetpoint = parseFloat(data.data.temp_setpoint);
             humSetpoint = parseInt(data.data.hum_setpoint);
@@ -273,14 +309,11 @@ async function loadSetpointsFromDB() {
 }
 async function saveSetpointsToDB(temp, hum) {
     try {
-        const params = new URLSearchParams();
-        params.append('action', 'update_settings');
-        params.append('temp_setpoint', temp);
-        params.append('hum_setpoint', hum);
-        await fetch(API_BASE, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
+        await apiPost('update_settings', { temp_setpoint: temp, hum_setpoint: hum });
     } catch(e) { console.error(e); }
 }
 
+// ========== WATER STATUS ==========
 function setWaterStatus(available) {
     isWaterAvailable = available;
     if (available) {
@@ -291,6 +324,7 @@ function setWaterStatus(available) {
     runControlLogic();
 }
 
+// ========== CHART ==========
 function initChart() {
     const ctx = document.getElementById('trendChart').getContext('2d');
     chart = new Chart(ctx, {
@@ -320,6 +354,7 @@ function appendTrendData(t, h, p) {
     }
 }
 
+// ========== KONTROL LOGIKA ==========
 function runControlLogic() {
     const t = parseFloat(inTemp.value);
     const h = parseInt(inHum.value);
@@ -349,6 +384,7 @@ function runControlLogic() {
                 logMsg = '<span class="text-emerald-500">> XAMPP: Kondisi ideal, Pompa standby.</span>';
             }
         } else {
+            // AUTO
             if (t > tempSetpoint || h < humSetpoint) {
                 pumpState = true;
                 isCritical = true;
@@ -380,13 +416,24 @@ function runControlLogic() {
 
     logAction.html(logMsg);
     appendTrendData(t, h, pumpState);
+
+    // Kirim ke Google Sheets jika mode XAMPP aktif (sebagai log sensor)
+    if (isXamppMode) {
+        // Kirim data ke log_sensor
+        apiPost('log_sensor', {
+            suhu: t,
+            kelembapan: h,
+            status_sistem: pumpState ? 1 : 0,
+            air_habis: isWaterAvailable ? 0 : 1
+        }).catch(console.error);
+    }
 }
 
+// ========== FETCH XAMPP ==========
 async function fetchXamppData() {
     if (!isXamppMode) return;
     try {
-        const response = await fetch(API_BASE); // GET tanpa action
-        const data = await response.json();
+        const data = await apiGet('get_latest');
         if (data.success && data.data) {
             inTemp.value = parseFloat(data.data.suhu);
             inHum.value = parseInt(data.data.kelembapan);
@@ -396,11 +443,12 @@ async function fetchXamppData() {
         }
     } catch(e) {
         console.error(e);
-        logAction.html('<span class="text-red-400">> ERROR: Gagal koneksi ke API XAMPP</span>');
+        logAction.html('<span class="text-red-400">> ERROR: Gagal koneksi ke API Google Sheets</span>');
     }
 }
 setInterval(fetchXamppData, 3000);
 
+// ========== EVENT SETPOINT ==========
 setpointTempSlider.on('input', (e) => {
     tempSetpoint = parseFloat(e.target.value);
     setpointTempVal.text(tempSetpoint.toFixed(1));
@@ -414,11 +462,13 @@ setpointHumSlider.on('input', (e) => {
     if (!isXamppMode && !isManualMode) runControlLogic();
 });
 
+// ========== MODE BUTTONS ==========
 function setUIMode() {
     const disable = isXamppMode;
     setpointPanel.css('opacity', disable ? '0.5' : '1');
     setpointPanel.css('pointer-events', disable ? 'none' : 'auto');
 }
+
 modeXamppBtn.on('click', () => {
     isXamppMode = true; isManualMode = false;
     if (isCycleRunning) toggleAutoCycle();
@@ -449,10 +499,26 @@ modeManualBtn.on('click', () => {
     setUIMode();
     runControlLogic();
 });
-btnPumpOn.on('click', () => { if (isManualMode) { manualPumpOverrideState = true; runControlLogic(); } });
-btnPumpOff.on('click', () => { if (isManualMode) { manualPumpOverrideState = false; runControlLogic(); } });
-btnLs.on('click', () => { if (!isXamppMode) { setWaterStatus(!isWaterAvailable); runControlLogic(); } });
+btnPumpOn.on('click', () => {
+    if (isManualMode) {
+        manualPumpOverrideState = true;
+        runControlLogic();
+    }
+});
+btnPumpOff.on('click', () => {
+    if (isManualMode) {
+        manualPumpOverrideState = false;
+        runControlLogic();
+    }
+});
+btnLs.on('click', () => {
+    if (!isXamppMode) {
+        setWaterStatus(!isWaterAvailable);
+        runControlLogic();
+    }
+});
 
+// ========== SIKLUS 24 JAM ==========
 function toggleAutoCycle() {
     isCycleRunning = !isCycleRunning;
     if (isCycleRunning) {
@@ -495,6 +561,7 @@ function toggleAutoCycle() {
 }
 autoCycleBtn.on('click', toggleAutoCycle);
 
+// ========== EXPORT CSV ==========
 exportCsvBtn.on('click', () => {
     let csvRows = [["Index","Suhu (°C)","Kelembapan (%)","Status Pompa"]];
     for (let i=0; i<maxDataPoints; i++) {
@@ -510,6 +577,7 @@ exportCsvBtn.on('click', () => {
     URL.revokeObjectURL(url);
 });
 
+// ========== KALKULATOR ==========
 function updateCalculator() {
     let n = parseInt(calcNozzles.val()) || 0;
     let f = parseFloat(calcFlow.val()) || 0;
@@ -523,6 +591,7 @@ calcFlow.on('input', updateCalculator);
 calcDuration.on('input', updateCalculator);
 updateCalculator();
 
+// ========== DARK MODE ==========
 $('#darkModeToggle').on('click', () => {
     $('body').toggleClass('light-mode');
     const isLight = $('body').hasClass('light-mode');
@@ -533,6 +602,7 @@ $('#darkModeToggle').on('click', () => {
     }
 });
 
+// ========== INISIALISASI ==========
 initChart();
 loadSetpointsFromDB().then(() => {
     setWaterStatus(true);
