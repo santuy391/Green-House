@@ -19,10 +19,12 @@
         .status-aktif { color: green; font-weight: bold; }
         .status-panen { color: orange; }
         .status-mati { color: red; }
+        .table-plant th { background-color: #e9ecef; }
     </style>
 </head>
 <body>
 
+<!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
     <div class="container">
         <a class="navbar-brand" href="index.html"><i class="fas fa-leaf"></i> Greenhouse System</a>
@@ -37,8 +39,10 @@
 <div class="container mt-4">
     <h2 class="mb-4"><i class="fas fa-seedling me-2"></i> Manajemen Tanaman Greenhouse</h2>
 
+    <!-- Tombol Tambah -->
     <button class="btn btn-green mb-3" data-bs-toggle="modal" data-bs-target="#plantModal" onclick="resetPlantForm()"><i class="fas fa-plus"></i> Tanaman Baru</button>
 
+    <!-- Daftar Tanaman -->
     <div class="row" id="plantsContainer"></div>
 
     <!-- Modal Tanaman -->
@@ -55,7 +59,7 @@
                         <div class="mb-2"><label>Nama Tanaman</label><input type="text" id="plantName" class="form-control" required></div>
                         <div class="mb-2"><label>Varietas</label><input type="text" id="plantVariety" class="form-control"></div>
                         <div class="mb-2"><label>Tanggal Tanam</label><input type="date" id="plantingDate" class="form-control" required></div>
-                        <div class="mb-2"><label>Lokasi</label><input type="text" id="plantLocation" class="form-control" placeholder="Rak A, Lantai 1"></div>
+                        <div class="mb-2"><label>Lokasi</label><input type="text" id="plantLocation" class="form-control" placeholder="Rak A, Lantai 1, ..."></div>
                         <div class="mb-2"><label>Status</label>
                             <select id="plantStatus" class="form-control">
                                 <option value="aktif">Aktif</option>
@@ -85,10 +89,11 @@
                 <div class="modal-body">
                     <ul class="nav nav-tabs" id="plantTab" role="tablist">
                         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#growthTab">📈 Pertumbuhan</button></li>
-                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tasksTab">📋 Tugas</button></li>
-                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#infoTab">ℹ️ Info</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tasksTab">📋 Tugas Perawatan</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#infoTab">ℹ️ Informasi</button></li>
                     </ul>
                     <div class="tab-content mt-3">
+                        <!-- Tab Pertumbuhan -->
                         <div class="tab-pane fade show active" id="growthTab">
                             <button class="btn btn-sm btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#growthLogModal" onclick="setGrowthPlantId()"><i class="fas fa-plus"></i> Tambah Catatan</button>
                             <canvas id="growthChart" width="400" height="200" style="max-height: 250px;"></canvas>
@@ -99,13 +104,15 @@
                                 </table>
                             </div>
                         </div>
+                        <!-- Tab Tugas -->
                         <div class="tab-pane fade" id="tasksTab">
                             <button class="btn btn-sm btn-warning mb-2" data-bs-toggle="modal" data-bs-target="#taskModal" onclick="setTaskPlantId()"><i class="fas fa-plus"></i> Tambah Tugas</button>
                             <table class="table table-sm table-bordered">
-                                <thead><tr><th>Jenis</th><th>Jadwal</th><th>Status</th><th>Catatan</th><th>Aksi</th></tr></thead>
+                                <thead><tr><th>Jenis</th><th>Tanggal Jadwal</th><th>Status</th><th>Catatan</th><th>Aksi</th></tr></thead>
                                 <tbody id="tasksTable"></tbody>
                             </table>
                         </div>
+                        <!-- Tab Info -->
                         <div class="tab-pane fade" id="infoTab">
                             <p><strong>Varietas:</strong> <span id="infoVariety"></span></p>
                             <p><strong>Tanggal Tanam:</strong> <span id="infoPlantingDate"></span></p>
@@ -176,18 +183,38 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ===================== KONFIGURASI =====================
-// >>>>>> GANTI URL INI DENGAN WEB APP ANDA <<<<<<
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzyvOG80fgL2SgzV_5JFQXkp0XqcufhrrRix3YnKXEhavA-dVB2hv3DwYhIxnNQw7AT/exec';
-// =======================================================
+// ==================== KONFIGURASI API ====================
+const API_BASE = 'https://script.google.com/macros/s/AKfycbwLsLhjP53JKq3WQX67QzdssJwtbOydB1vgVSpZb0w/dev';
 
+function apiGet(action, params = {}) {
+    return new Promise((resolve, reject) => {
+        params.action = action;
+        $.get(API_BASE, params, function(res) { resolve(res); }).fail(reject);
+    });
+}
+function apiPost(action, data = {}) {
+    return new Promise((resolve, reject) => {
+        data.action = action;
+        $.ajax({
+            url: API_BASE,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            dataType: 'json',
+            success: resolve,
+            error: reject
+        });
+    });
+}
+
+// ==================== GLOBAL ====================
 let currentPlantId = null;
 let growthChart = null;
 
+// ========== LOAD DAFTAR TANAMAN ==========
 function loadPlants() {
-    $.get(API_BASE + '?action=get_plants', function(res) {
+    apiGet('get_plants').then(res => {
         if (res.success) {
             let html = '';
             res.data.forEach(plant => {
@@ -212,9 +239,10 @@ function loadPlants() {
             });
             $('#plantsContainer').html(html || '<div class="col-12">Belum ada tanaman. Klik "Tanaman Baru".</div>');
         }
-    });
+    }).catch(console.error);
 }
 
+// ========== CRUD TANAMAN ==========
 function resetPlantForm() {
     $('#plantId').val('');
     $('#plantName').val('');
@@ -224,8 +252,9 @@ function resetPlantForm() {
     $('#plantStatus').val('aktif');
     $('#plantNotes').val('');
 }
+
 function editPlant(id) {
-    $.get(API_BASE + '?action=get_plants', function(res) {
+    apiGet('get_plants').then(res => {
         let plant = res.data.find(p => p.id == id);
         if (plant) {
             $('#plantId').val(plant.id);
@@ -237,12 +266,12 @@ function editPlant(id) {
             $('#plantNotes').val(plant.notes);
             $('#plantModal').modal('show');
         }
-    });
+    }).catch(console.error);
 }
+
 function savePlant() {
     let id = $('#plantId').val();
-    let formData = {
-        action: id ? 'update_plant' : 'add_plant',
+    let data = {
         name: $('#plantName').val(),
         variety: $('#plantVariety').val(),
         planting_date: $('#plantingDate').val(),
@@ -250,31 +279,40 @@ function savePlant() {
         status: $('#plantStatus').val(),
         notes: $('#plantNotes').val()
     };
-    if (id) formData.id = id;
-    $.post(API_BASE, formData, function(res) {
-        if (res.success) { $('#plantModal').modal('hide'); loadPlants(); }
-        else alert('Gagal menyimpan tanaman');
-    }, 'json');
+    let action = id ? 'update_plant' : 'add_plant';
+    if (id) data.id = id;
+    apiPost(action, data).then(res => {
+        if (res.success) {
+            $('#plantModal').modal('hide');
+            loadPlants();
+        } else alert('Gagal menyimpan tanaman');
+    }).catch(console.error);
 }
+
 function deletePlant(id) {
-    if (confirm('Hapus tanaman ini?')) {
-        $.post(API_BASE, { action: 'delete_plant', id: id }, function(res) {
-            if (res.success) loadPlants(); else alert('Gagal hapus');
-        }, 'json');
-    }
-}
-function deleteCurrentPlant() {
-    if (currentPlantId && confirm('Hapus tanaman ini?')) {
-        $.post(API_BASE, { action: 'delete_plant', id: currentPlantId }, function(res) {
-            if (res.success) { $('#detailModal').modal('hide'); loadPlants(); }
-            else alert('Gagal');
-        });
+    if (confirm('Hapus tanaman ini? Semua data pertumbuhan & tugas akan ikut terhapus.')) {
+        apiPost('delete_plant', { id }).then(res => {
+            if (res.success) loadPlants();
+            else alert('Gagal hapus');
+        }).catch(console.error);
     }
 }
 
+function deleteCurrentPlant() {
+    if (currentPlantId && confirm('Hapus tanaman ini?')) {
+        apiPost('delete_plant', { id: currentPlantId }).then(res => {
+            if (res.success) {
+                $('#detailModal').modal('hide');
+                loadPlants();
+            } else alert('Gagal');
+        }).catch(console.error);
+    }
+}
+
+// ========== DETAIL ==========
 function showDetail(plantId) {
     currentPlantId = plantId;
-    $.get(API_BASE + '?action=get_plants', function(res) {
+    apiGet('get_plants').then(res => {
         let plant = res.data.find(p => p.id == plantId);
         if (plant) {
             $('#detailTitle').text(`Detail: ${plant.name}`);
@@ -284,14 +322,15 @@ function showDetail(plantId) {
             $('#infoStatus').html(`<span class="status-${plant.status}">${plant.status.toUpperCase()}</span>`);
             $('#infoNotes').text(plant.notes || '-');
         }
-    });
+    }).catch(console.error);
     loadGrowthLogs(plantId);
     loadTasks(plantId);
     $('#detailModal').modal('show');
 }
 
+// ========== GROWTH LOGS ==========
 function loadGrowthLogs(plantId) {
-    $.get(API_BASE + '?action=get_growth_logs&plant_id=' + plantId, function(res) {
+    apiGet('get_growth_logs', { plant_id: plantId }).then(res => {
         if (res.success) {
             let logs = res.data;
             let html = '';
@@ -303,23 +342,30 @@ function loadGrowthLogs(plantId) {
                 </tr>`;
             });
             $('#growthLogsTable').html(html);
-
+            // Grafik
             let dates = logs.map(l => l.log_date);
             let heights = logs.map(l => l.height_cm ? parseFloat(l.height_cm) : null);
             if (growthChart) growthChart.destroy();
             let ctx = document.getElementById('growthChart').getContext('2d');
             growthChart = new Chart(ctx, {
                 type: 'line',
-                data: { labels: dates, datasets: [{ label: 'Tinggi (cm)', data: heights, borderColor: '#2c7a47', fill: false }] },
+                data: {
+                    labels: dates,
+                    datasets: [{ label: 'Tinggi (cm)', data: heights, borderColor: '#2c7a47', fill: false }]
+                },
                 options: { responsive: true, maintainAspectRatio: true }
             });
         }
-    });
+    }).catch(console.error);
 }
-function setGrowthPlantId() { $('#logPlantId').val(currentPlantId); $('#logDate').val(new Date().toISOString().slice(0,10)); }
+
+function setGrowthPlantId() {
+    $('#logPlantId').val(currentPlantId);
+    $('#logDate').val(new Date().toISOString().slice(0,10));
+}
+
 function saveGrowthLog() {
     let data = {
-        action: 'add_growth_log',
         plant_id: $('#logPlantId').val(),
         log_date: $('#logDate').val(),
         height_cm: $('#logHeight').val(),
@@ -327,24 +373,26 @@ function saveGrowthLog() {
         health_status: $('#logHealth').val(),
         notes: $('#logNotes').val()
     };
-    $.post(API_BASE, data, function(res) {
+    apiPost('add_growth_log', data).then(res => {
         if (res.success) {
             $('#growthLogModal').modal('hide');
             loadGrowthLogs(currentPlantId);
             $('#logHeight').val(''); $('#logLeafCount').val(''); $('#logNotes').val('');
         } else alert('Gagal');
-    }, 'json');
+    }).catch(console.error);
 }
+
 function deleteGrowthLog(id) {
     if (confirm('Hapus catatan ini?')) {
-        $.post(API_BASE, { action: 'delete_growth_log', id: id }, function(res) {
+        apiPost('delete_growth_log', { id }).then(res => {
             if (res.success) loadGrowthLogs(currentPlantId);
-        }, 'json');
+        }).catch(console.error);
     }
 }
 
+// ========== TASKS ==========
 function loadTasks(plantId) {
-    $.get(API_BASE + '?action=get_tasks&plant_id=' + plantId, function(res) {
+    apiGet('get_tasks', { plant_id: plantId }).then(res => {
         if (res.success) {
             let html = '';
             res.data.forEach(task => {
@@ -360,40 +408,55 @@ function loadTasks(plantId) {
             });
             $('#tasksTable').html(html);
         }
-    });
+    }).catch(console.error);
 }
-function setTaskPlantId() { $('#taskPlantId').val(currentPlantId); $('#taskDate').val(new Date().toISOString().slice(0,10)); }
+
+function setTaskPlantId() {
+    $('#taskPlantId').val(currentPlantId);
+    $('#taskDate').val(new Date().toISOString().slice(0,10));
+}
+
 function saveTask() {
     let data = {
-        action: 'add_task',
         plant_id: $('#taskPlantId').val(),
         task_type: $('#taskType').val(),
         scheduled_date: $('#taskDate').val(),
         notes: $('#taskNotes').val()
     };
-    $.post(API_BASE, data, function(res) {
+    apiPost('add_task', data).then(res => {
         if (res.success) {
             $('#taskModal').modal('hide');
             loadTasks(currentPlantId);
             $('#taskNotes').val('');
         } else alert('Gagal');
-    }, 'json');
+    }).catch(console.error);
 }
+
 function completeTask(id) {
-    $.post(API_BASE, { action: 'complete_task', id: id }, function(res) {
+    apiPost('complete_task', { id }).then(res => {
         if (res.success) loadTasks(currentPlantId);
-    }, 'json');
+    }).catch(console.error);
 }
+
 function deleteTask(id) {
     if (confirm('Hapus tugas ini?')) {
-        $.post(API_BASE, { action: 'delete_task', id: id }, function(res) {
+        apiPost('delete_task', { id }).then(res => {
             if (res.success) loadTasks(currentPlantId);
-        }, 'json');
+        }).catch(console.error);
     }
 }
 
-function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
+function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
 loadPlants();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
