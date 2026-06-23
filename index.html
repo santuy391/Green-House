@@ -1,417 +1,606 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Manajemen Greenhouse</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        .card-header { background-color: #2c7a47; color: white; }
-        .status-on { color: green; font-weight: bold; }
-        .status-off { color: red; font-weight: bold; }
-        .water-empty { color: red; }
-        .water-ok { color: green; }
-        .badge-aman { background-color: #198754; font-size: 1rem; }
-        .badge-tidak-aman { background-color: #dc3545; font-size: 1rem; }
-        .datetime-badge {
-            font-size: 1.1rem;
-            padding: 8px 16px;
-            background-color: #2c3e50;
-            color: white;
-            border-radius: 50px;
-            display: inline-block;
-        }
-        .navbar-brand { font-weight: bold; }
-    </style>
+    <title>GreenHouse IoT — Sistem Otomatisasi Penyiraman</title>
+    <meta name="description" content="Sistem informasi greenhouse berbasis IoT untuk monitoring dan otomatisasi penyiraman tanaman secara real-time.">
+    <meta name="keywords" content="greenhouse, IoT, otomatisasi, penyiraman, smart farming">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="index.html">🌱 SmartGreenHouse</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link active" href="index.html">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="simulator.html">🎮 Simulator</a></li>
-                <li class="nav-item"><a class="nav-link" href="plant_management.html">🌿 Manajemen Tanaman</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-<div class="container mt-4">
-    <h2 class="text-center mb-2">🌿 Sistem Manajemen Greenhouse Otomatis</h2>
-    
-    <!-- Waktu & Tanggal Real-time -->
-    <div class="text-center mb-4">
-        <div class="datetime-badge" id="currentDateTime">Memuat waktu...</div>
-    </div>
-
-    <!-- Card status real-time -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-white bg-primary">
-                <div class="card-header">🌡️ Suhu Saat Ini</div>
-                <div class="card-body"><h3 id="suhu">-- °C</h3></div>
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="12" fill="url(#brandGrad)"/>
+                    <text x="50%" y="55%" text-anchor="middle" dominant-baseline="central" font-size="20">🌿</text>
+                    <defs><linearGradient id="brandGrad" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#10B981"/><stop offset="1" stop-color="#059669"/></linearGradient></defs>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">GreenHouse</span>
+                <span class="brand-sub">IoT System</span>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success">
-                <div class="card-header">💧 Kelembapan Saat Ini</div>
-                <div class="card-body"><h3 id="kelembapan">-- %</h3></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-warning">
-                <div class="card-header">🚰 Status Pompa</div>
-                <div class="card-body"><h3 id="status_pompa">--</h3></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-info">
-                <div class="card-header">💦 Status Air Tandon</div>
-                <div class="card-body"><h3 id="status_air">--</h3></div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Indikator Kondisi -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card text-white bg-dark">
-                <div class="card-header">⚠️ Kondisi Greenhouse</div>
-                <div class="card-body text-center">
-                    <h3 id="status_aman" class="mb-0">--</h3>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-link active" data-section="dashboard" id="nav-dashboard">
+                <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="#" class="nav-link" data-section="schedule" id="nav-schedule">
+                <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                <span class="nav-text">Jadwal</span>
+            </a>
+            <a href="#" class="nav-link" data-section="settings" id="nav-settings">
+                <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                <span class="nav-text">Pengaturan</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="connection-status">
+                <span class="status-dot" id="connectionDot"></span>
+                <span class="status-text" id="connectionText">Terhubung</span>
+            </div>
+            <div class="device-info">ESP32 • v2.1.0</div>
+        </div>
+    </aside>
+
+    <!-- ===== OVERLAY (Mobile) ===== -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content" id="mainContent">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div class="header-info">
+                    <h1 class="header-title" id="pageTitle">Dashboard</h1>
+                    <p class="header-subtitle" id="pageSubtitle">Monitoring real-time greenhouse Anda</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Form setpoint -->
-    <div class="card mb-4">
-        <div class="card-header">⚙️ Pengaturan Setpoint</div>
-        <div class="card-body">
-            <form id="form_setpoint">
-                <div class="row">
-                    <div class="col-md-4"><label>Suhu Setpoint (°C)</label><input type="number" step="0.5" class="form-control" id="temp_setpoint" required></div>
-                    <div class="col-md-4"><label>Kelembapan Setpoint (%)</label><input type="number" class="form-control" id="hum_setpoint" required></div>
-                    <div class="col-md-4 align-self-end"><button type="submit" class="btn btn-primary">Simpan Setpoint</button></div>
+            <div class="header-right">
+                <div class="header-time" id="headerTime">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span id="clockText">00:00</span>
                 </div>
-            </form>
-            <div id="setpoint_msg" class="mt-2"></div>
-        </div>
-    </div>
+                <button class="icon-btn" id="themeToggle" title="Ganti Tema" aria-label="Toggle theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <button class="icon-btn notif-btn" id="notifBtn" title="Notifikasi" aria-label="Notifications">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span class="notif-badge" id="notifBadge">0</span>
+                </button>
+            </div>
+        </header>
 
-    <!-- Kontrol Manual -->
-    <div class="card mb-4">
-        <div class="card-header">🕹️ Kontrol Manual (Override)</div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-4">
-                    <label>Mode Operasi</label>
-                    <div class="btn-group w-100" role="group">
-                        <button type="button" id="mode-auto-btn" class="btn btn-outline-primary">Auto</button>
-                        <button type="button" id="mode-manual-btn" class="btn btn-outline-warning">Manual</button>
+        <!-- ===== DASHBOARD SECTION ===== -->
+        <section class="content-section active" id="section-dashboard">
+            <!-- Stats Overview -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card" data-type="moisture">
+                    <div class="stat-icon moisture-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="avgMoisture">--</span>
+                        <span class="stat-label">Kelembapan Tanah</span>
+                        <span class="stat-unit">% Rata-rata</span>
+                    </div>
+                    <div class="stat-trend" id="moistureTrend">
+                        <span class="trend-arrow">↑</span> <span class="trend-value">0%</span>
                     </div>
                 </div>
-                <div class="col-md-4" id="manual-controls" style="display: none;">
-                    <label>Kontrol Pompa</label>
-                    <div class="btn-group w-100" role="group">
-                        <button type="button" id="pump-on-btn" class="btn btn-outline-success">Hidupkan Pompa</button>
-                        <button type="button" id="pump-off-btn" class="btn btn-outline-danger">Matikan Pompa</button>
+                <div class="stat-card" data-type="temperature">
+                    <div class="stat-icon temp-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="avgTemp">--</span>
+                        <span class="stat-label">Suhu Udara</span>
+                        <span class="stat-unit">°C Rata-rata</span>
+                    </div>
+                    <div class="stat-trend" id="tempTrend">
+                        <span class="trend-arrow">↑</span> <span class="trend-value">0°</span>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="alert alert-secondary mb-0">
-                        Mode: <strong id="current-mode-label">Auto</strong><br>
-                        Pompa Manual: <strong id="manual-pump-label">OFF</strong>
+                <div class="stat-card" data-type="humidity">
+                    <div class="stat-icon humid-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6m0 0l3-3m-3 3L9 5"/><path d="M17 21H7a4 4 0 0 1-1-7.87 6 6 0 0 1 11.33-2.65A4.5 4.5 0 0 1 21 15.5 4.5 4.5 0 0 1 17 21z"/></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="avgHumidity">--</span>
+                        <span class="stat-label">Kelembapan Udara</span>
+                        <span class="stat-unit">% Rata-rata</span>
+                    </div>
+                    <div class="stat-trend" id="humidityTrend">
+                        <span class="trend-arrow">↑</span> <span class="trend-value">0%</span>
+                    </div>
+                </div>
+                <div class="stat-card" data-type="light">
+                    <div class="stat-icon light-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="avgLight">--</span>
+                        <span class="stat-label">Intensitas Cahaya</span>
+                        <span class="stat-unit">lux Rata-rata</span>
+                    </div>
+                    <div class="stat-trend" id="lightTrend">
+                        <span class="trend-arrow">↑</span> <span class="trend-value">0</span>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Jadwal -->
-    <div class="card mb-4">
-        <div class="card-header">📅 Jadwal Penyiraman Otomatis</div>
-        <div class="card-body">
-            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#scheduleModal" onclick="openAddModal()">+ Tambah Jadwal</button>
-            <table class="table table-bordered">
-                <thead><tr><th>Waktu</th><th>Durasi (menit)</th><th>Status</th><th>Aksi</th></tr></thead>
-                <tbody id="scheduleList"></tbody>
-            </table>
-        </div>
-    </div>
+            <!-- Zone Cards -->
+            <div class="section-header">
+                <h2 class="section-title">🌱 Zona Greenhouse</h2>
+                <span class="section-badge" id="activeZonesBadge">3 Zona Aktif</span>
+            </div>
+            <div class="zones-grid" id="zonesGrid">
+                <!-- Zone 1: Sayuran -->
+                <div class="zone-card" data-zone="0" id="zoneCard0">
+                    <div class="zone-header">
+                        <div class="zone-title">
+                            <span class="zone-emoji">🥬</span>
+                            <div>
+                                <h3 class="zone-name">Zona Sayuran</h3>
+                                <span class="zone-desc">Selada, Tomat, Timun</span>
+                            </div>
+                        </div>
+                        <span class="zone-status idle" id="zoneStatus0">Idle</span>
+                    </div>
+                    <div class="zone-gauges">
+                        <div class="gauge-wrapper">
+                            <canvas class="gauge-canvas" id="gauge-moisture-0" width="140" height="100"></canvas>
+                            <div class="gauge-label">Kelembapan</div>
+                            <div class="gauge-value" id="gaugeVal-moisture-0">--%</div>
+                        </div>
+                        <div class="gauge-wrapper">
+                            <canvas class="gauge-canvas" id="gauge-temp-0" width="140" height="100"></canvas>
+                            <div class="gauge-label">Suhu</div>
+                            <div class="gauge-value" id="gaugeVal-temp-0">--°C</div>
+                        </div>
+                    </div>
+                    <div class="zone-readings">
+                        <div class="reading-item">
+                            <span class="reading-icon">💨</span>
+                            <span class="reading-label">Kelembapan Udara</span>
+                            <span class="reading-value" id="reading-humidity-0">--%</span>
+                        </div>
+                        <div class="reading-item">
+                            <span class="reading-icon">☀️</span>
+                            <span class="reading-label">Cahaya</span>
+                            <span class="reading-value" id="reading-light-0">-- lux</span>
+                        </div>
+                        <div class="reading-item">
+                            <span class="reading-icon">💧</span>
+                            <span class="reading-label">Terakhir Disiram</span>
+                            <span class="reading-value" id="reading-lastWater-0">--</span>
+                        </div>
+                    </div>
+                    <div class="zone-controls">
+                        <label class="toggle-switch" title="Mode Otomatis">
+                            <input type="checkbox" class="auto-toggle" id="autoToggle0" data-zone="0" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Otomatis</span>
+                        </label>
+                        <button class="pump-btn" id="pumpBtn0" data-zone="0" title="Siram Manual">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                            <span>Siram</span>
+                        </button>
+                    </div>
+                </div>
 
-    <!-- Grafik -->
-    <div class="card">
-        <div class="card-header">📈 Riwayat Sensor (100 data terakhir)</div>
-        <div class="card-body"><canvas id="sensorChart" width="400" height="200"></canvas></div>
-    </div>
-</div>
+                <!-- Zone 2: Buah -->
+                <div class="zone-card" data-zone="1" id="zoneCard1">
+                    <div class="zone-header">
+                        <div class="zone-title">
+                            <span class="zone-emoji">🍓</span>
+                            <div>
+                                <h3 class="zone-name">Zona Buah</h3>
+                                <span class="zone-desc">Stroberi, Melon, Semangka</span>
+                            </div>
+                        </div>
+                        <span class="zone-status idle" id="zoneStatus1">Idle</span>
+                    </div>
+                    <div class="zone-gauges">
+                        <div class="gauge-wrapper">
+                            <canvas class="gauge-canvas" id="gauge-moisture-1" width="140" height="100"></canvas>
+                            <div class="gauge-label">Kelembapan</div>
+                            <div class="gauge-value" id="gaugeVal-moisture-1">--%</div>
+                        </div>
+                        <div class="gauge-wrapper">
+                            <canvas class="gauge-canvas" id="gauge-temp-1" width="140" height="100"></canvas>
+                            <div class="gauge-label">Suhu</div>
+                            <div class="gauge-value" id="gaugeVal-temp-1">--°C</div>
+                        </div>
+                    </div>
+                    <div class="zone-readings">
+                        <div class="reading-item">
+                            <span class="reading-icon">💨</span>
+                            <span class="reading-label">Kelembapan Udara</span>
+                            <span class="reading-value" id="reading-humidity-1">--%</span>
+                        </div>
+                        <div class="reading-item">
+                            <span class="reading-icon">☀️</span>
+                            <span class="reading-label">Cahaya</span>
+                            <span class="reading-value" id="reading-light-1">-- lux</span>
+                        </div>
+                        <div class="reading-item">
+                            <span class="reading-icon">💧</span>
+                            <span class="reading-label">Terakhir Disiram</span>
+                            <span class="reading-value" id="reading-lastWater-0">--</span>
+                        </div>
+                    </div>
+                    <div class="zone-controls">
+                        <label class="toggle-switch" title="Mode Otomatis">
+                            <input type="checkbox" class="auto-toggle" id="autoToggle1" data-zone="1" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Otomatis</span>
+                        </label>
+                        <button class="pump-btn" id="pumpBtn1" data-zone="1" title="Siram Manual">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                            <span>Siram</span>
+                        </button>
+                    </div>
+                </div>
 
-<!-- Modal Jadwal -->
-<div class="modal fade" id="scheduleModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Tambah/Edit Jadwal</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
+                <!-- Zone 3: Tanaman Hias -->
+                <div class="zone-card" data-zone="2" id="zoneCard2">
+                    <div class="zone-header">
+                        <div class="zone-title">
+                            <span class="zone-emoji">🌺</span>
+                            <div>
+                                <h3 class="zone-name">Zona Tanaman Hias</h3>
+                                <span class="zone-desc">Anggrek, Mawar, Lili</span>
+                            </div>
+                        </div>
+                        <span class="zone-status idle" id="zoneStatus2">Idle</span>
+                    </div>
+                    <div class="zone-gauges">
+                        <div class="gauge-wrapper">
+                            <canvas class="gauge-canvas" id="gauge-moisture-2" width="140" height="100"></canvas>
+                            <div class="gauge-label">Kelembapan</div>
+                            <div class="gauge-value" id="gaugeVal-moisture-2">--%</div>
+                        </div>
+                        <div class="gauge-wrapper">
+                            <canvas class="gauge-canvas" id="gauge-temp-2" width="140" height="100"></canvas>
+                            <div class="gauge-label">Suhu</div>
+                            <div class="gauge-value" id="gaugeVal-temp-2">--°C</div>
+                        </div>
+                    </div>
+                    <div class="zone-readings">
+                        <div class="reading-item">
+                            <span class="reading-icon">💨</span>
+                            <span class="reading-label">Kelembapan Udara</span>
+                            <span class="reading-value" id="reading-humidity-2">--%</span>
+                        </div>
+                        <div class="reading-item">
+                            <span class="reading-icon">☀️</span>
+                            <span class="reading-label">Cahaya</span>
+                            <span class="reading-value" id="reading-light-2">-- lux</span>
+                        </div>
+                        <div class="reading-item">
+                            <span class="reading-icon">💧</span>
+                            <span class="reading-label">Terakhir Disiram</span>
+                            <span class="reading-value" id="reading-lastWater-2">--</span>
+                        </div>
+                    </div>
+                    <div class="zone-controls">
+                        <label class="toggle-switch" title="Mode Otomatis">
+                            <input type="checkbox" class="auto-toggle" id="autoToggle2" data-zone="2" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Otomatis</span>
+                        </label>
+                        <button class="pump-btn" id="pumpBtn2" data-zone="2" title="Siram Manual">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                            <span>Siram</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Automation Panel -->
+            <div class="section-header">
+                <h2 class="section-title">⚙️ Kontrol Otomatisasi</h2>
+                <div class="auto-master">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="masterAutoToggle" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Master Auto</span>
+                    </label>
+                </div>
+            </div>
+            <div class="automation-grid" id="automationGrid">
+                <div class="auto-card" data-zone="0">
+                    <div class="auto-card-header">
+                        <span class="auto-card-emoji">🥬</span>
+                        <span class="auto-card-name">Zona Sayuran</span>
+                    </div>
+                    <div class="auto-setting">
+                        <label class="auto-label">Threshold Kering</label>
+                        <div class="range-group">
+                            <input type="range" class="threshold-range" id="threshold0" data-zone="0" min="10" max="80" value="40">
+                            <span class="range-val" id="thresholdVal0">40%</span>
+                        </div>
+                        <p class="auto-hint">Pompa aktif jika kelembapan tanah &lt; threshold</p>
+                    </div>
+                    <div class="auto-setting">
+                        <label class="auto-label">Durasi Siram</label>
+                        <div class="range-group">
+                            <input type="range" class="duration-range" id="duration0" data-zone="0" min="5" max="120" value="30" step="5">
+                            <span class="range-val" id="durationVal0">30 dtk</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="auto-card" data-zone="1">
+                    <div class="auto-card-header">
+                        <span class="auto-card-emoji">🍓</span>
+                        <span class="auto-card-name">Zona Buah</span>
+                    </div>
+                    <div class="auto-setting">
+                        <label class="auto-label">Threshold Kering</label>
+                        <div class="range-group">
+                            <input type="range" class="threshold-range" id="threshold1" data-zone="1" min="10" max="80" value="45">
+                            <span class="range-val" id="thresholdVal1">45%</span>
+                        </div>
+                        <p class="auto-hint">Pompa aktif jika kelembapan tanah &lt; threshold</p>
+                    </div>
+                    <div class="auto-setting">
+                        <label class="auto-label">Durasi Siram</label>
+                        <div class="range-group">
+                            <input type="range" class="duration-range" id="duration1" data-zone="1" min="5" max="120" value="45" step="5">
+                            <span class="range-val" id="durationVal1">45 dtk</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="auto-card" data-zone="2">
+                    <div class="auto-card-header">
+                        <span class="auto-card-emoji">🌺</span>
+                        <span class="auto-card-name">Zona Tanaman Hias</span>
+                    </div>
+                    <div class="auto-setting">
+                        <label class="auto-label">Threshold Kering</label>
+                        <div class="range-group">
+                            <input type="range" class="threshold-range" id="threshold2" data-zone="2" min="10" max="80" value="35">
+                            <span class="range-val" id="thresholdVal2">35%</span>
+                        </div>
+                        <p class="auto-hint">Pompa aktif jika kelembapan tanah &lt; threshold</p>
+                    </div>
+                    <div class="auto-setting">
+                        <label class="auto-label">Durasi Siram</label>
+                        <div class="range-group">
+                            <input type="range" class="duration-range" id="duration2" data-zone="2" min="5" max="120" value="20" step="5">
+                            <span class="range-val" id="durationVal2">20 dtk</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Chart -->
+            <div class="section-header">
+                <h2 class="section-title">📈 Grafik Historis</h2>
+                <div class="chart-controls">
+                    <button class="chip-btn active" data-range="1h" id="chartRange1h">1 Jam</button>
+                    <button class="chip-btn" data-range="6h" id="chartRange6h">6 Jam</button>
+                    <button class="chip-btn" data-range="24h" id="chartRange24h">24 Jam</button>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-legend" id="chartLegend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Kelembapan Tanah</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#F59E0B"></span>Suhu</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#3B82F6"></span>Kelembapan Udara</span>
+                </div>
+                <canvas id="historyChart"></canvas>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="section-header">
+                <h2 class="section-title">📋 Log Aktivitas</h2>
+                <button class="text-btn" id="clearLogBtn">Hapus Semua</button>
+            </div>
+            <div class="activity-card" id="activityCard">
+                <div class="activity-list" id="activityList">
+                    <div class="activity-empty">
+                        <span>📭</span>
+                        <p>Belum ada aktivitas tercatat</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SCHEDULE SECTION ===== -->
+        <section class="content-section" id="section-schedule">
+            <div class="section-header">
+                <h2 class="section-title">➕ Tambah Jadwal Baru</h2>
+            </div>
+            <div class="schedule-form-card">
                 <form id="scheduleForm">
-                    <input type="hidden" id="schedule_id">
-                    <div class="mb-3"><label>Waktu (HH:MM)</label><input type="time" class="form-control" id="waktu" required></div>
-                    <div class="mb-3"><label>Durasi (menit)</label><input type="number" class="form-control" id="durasi" min="1" max="60" required></div>
-                    <div class="mb-3 form-check"><input type="checkbox" class="form-check-input" id="aktif" checked><label class="form-check-label">Aktif</label></div>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="schedZone">Zona</label>
+                            <select class="form-select" id="schedZone">
+                                <option value="0">🥬 Zona Sayuran</option>
+                                <option value="1">🍓 Zona Buah</option>
+                                <option value="2">🌺 Zona Tanaman Hias</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="schedTime">Waktu</label>
+                            <input type="time" class="form-input" id="schedTime" value="06:00" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="schedDuration">Durasi (detik)</label>
+                            <input type="number" class="form-input" id="schedDuration" min="5" max="300" value="30" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group days-group">
+                            <label class="form-label">Hari Aktif</label>
+                            <div class="days-picker" id="daysPicker">
+                                <button type="button" class="day-btn active" data-day="0">Sen</button>
+                                <button type="button" class="day-btn active" data-day="1">Sel</button>
+                                <button type="button" class="day-btn active" data-day="2">Rab</button>
+                                <button type="button" class="day-btn active" data-day="3">Kam</button>
+                                <button type="button" class="day-btn active" data-day="4">Jum</button>
+                                <button type="button" class="day-btn active" data-day="5">Sab</button>
+                                <button type="button" class="day-btn active" data-day="6">Min</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="primary-btn" id="addScheduleBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Tambah Jadwal
+                    </button>
                 </form>
             </div>
+
+            <div class="section-header" style="margin-top:2rem">
+                <h2 class="section-title">📅 Daftar Jadwal</h2>
+                <span class="section-badge" id="scheduleCountBadge">0 Jadwal</span>
+            </div>
+            <div class="schedule-list" id="scheduleList">
+                <div class="activity-empty">
+                    <span>📅</span>
+                    <p>Belum ada jadwal penyiraman</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SETTINGS SECTION ===== -->
+        <section class="content-section" id="section-settings">
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3 class="settings-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                        Koneksi WiFi
+                    </h3>
+                    <div class="form-group">
+                        <label class="form-label">SSID</label>
+                        <input type="text" class="form-input" id="settWifiSSID" value="GreenHouse_IoT" placeholder="Nama WiFi">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="settWifiPass" value="greenhouse123" placeholder="Password WiFi">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IP Address ESP32</label>
+                        <input type="text" class="form-input" id="settIP" value="192.168.1.100" placeholder="IP Address" editable>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3 class="settings-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        Notifikasi & Alert
+                    </h3>
+                    <div class="form-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settAlertDry" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Alert Tanah Kering</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settAlertTemp" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Alert Suhu Tinggi (&gt;38°C)</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settAlertPump" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Alert Pompa Aktif</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settSound" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Suara Notifikasi</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3 class="settings-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Sistem
+                    </h3>
+                    <div class="form-group">
+                        <label class="auto-label">Interval Baca Sensor</label>
+                        <div class="range-group">
+                            <input type="range" id="settInterval" min="1" max="30" value="3" step="1">
+                            <span class="range-val" id="settIntervalVal">3 dtk</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="auto-label">Riwayat Data Disimpan</label>
+                        <div class="range-group">
+                            <input type="range" id="settHistory" min="1" max="72" value="24" step="1">
+                            <span class="range-val" id="settHistoryVal">24 jam</span>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:1rem">
+                        <button class="danger-btn" id="resetSettingsBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            Reset ke Default
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-card about-card">
+                    <h3 class="settings-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Tentang Sistem
+                    </h3>
+                    <div class="about-info">
+                        <p><strong>GreenHouse IoT System</strong></p>
+                        <p>Versi 2.1.0</p>
+                        <p>Sistem informasi greenhouse berbasis IoT untuk monitoring dan otomatisasi penyiraman tanaman secara real-time.</p>
+                        <div class="about-tech">
+                            <span class="tech-badge">ESP32</span>
+                            <span class="tech-badge">DHT22</span>
+                            <span class="tech-badge">Soil Moisture</span>
+                            <span class="tech-badge">LDR</span>
+                            <span class="tech-badge">Relay 5V</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===== NOTIFICATION PANEL ===== -->
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-panel-header">
+            <h3>Notifikasi</h3>
+            <button class="text-btn" id="clearNotifBtn">Hapus Semua</button>
+        </div>
+        <div class="notif-list" id="notifList">
+            <div class="activity-empty">
+                <span>🔔</span>
+                <p>Tidak ada notifikasi</p>
+            </div>
         </div>
     </div>
-</div>
+    <div class="notif-overlay" id="notifOverlay"></div>
 
-<script>
-// ==================== KONFIGURASI ====================
-const API_BASE = 'https://script.google.com/macros/s/AKfycbwLsLhjP53JKq3WQX67QzdssJwtbOydB1vgVSpZb0w/dev'; // GANTI DENGAN URL WEB APP ANDA
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div class="toast-container" id="toastContainer"></div>
 
-// ==================== FUNGSI AJAX ====================
-function apiGet(action, params = {}) {
-    return new Promise((resolve, reject) => {
-        params.action = action;
-        $.get(API_BASE, params, function(res) {
-            resolve(res);
-        }).fail(reject);
-    });
-}
-
-function apiPost(action, data = {}) {
-    return new Promise((resolve, reject) => {
-        data.action = action;
-        $.ajax({
-            url: API_BASE,
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(data),
-            dataType: 'json',
-            success: resolve,
-            error: reject
-        });
-    });
-}
-
-// ==================== GLOBAL ====================
-let chart;
-let currentMode = 'auto', currentManualPump = 0;
-
-function updateDateTime() {
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
-    document.getElementById('currentDateTime').innerText = now.toLocaleDateString('id-ID', options);
-}
-setInterval(updateDateTime, 1000);
-updateDateTime();
-
-// ==================== LOAD DATA ====================
-function loadSetpoint() {
-    apiGet('get_settings').then(res => {
-        if (res.success && res.data) {
-            $('#temp_setpoint').val(res.data.temp_setpoint);
-            $('#hum_setpoint').val(res.data.hum_setpoint);
-            checkSafety();
-        }
-    }).catch(console.error);
-}
-
-function loadLatest() {
-    apiGet('get_latest').then(res => {
-        if (res.success && res.data) {
-            $('#suhu').text(res.data.suhu + ' °C');
-            $('#kelembapan').text(res.data.kelembapan + ' %');
-            let statusPompa = (res.data.status_sistem == 1) ? '<span class="status-on">MENYALA</span>' : '<span class="status-off">MATI</span>';
-            $('#status_pompa').html(statusPompa);
-            let statusAir = (res.data.air_habis == 1) ? '<span class="water-empty">HABIS</span>' : '<span class="water-ok">CUKUP</span>';
-            $('#status_air').html(statusAir);
-            checkSafety();
-        }
-    }).catch(console.error);
-}
-
-function checkSafety() {
-    let suhu = parseFloat($('#suhu').text());
-    let kelembapan = parseInt($('#kelembapan').text());
-    let tempSp = parseFloat($('#temp_setpoint').val());
-    let humSp = parseInt($('#hum_setpoint').val());
-    if (isNaN(suhu) || isNaN(kelembapan) || isNaN(tempSp) || isNaN(humSp)) return;
-    let tidakAman = (suhu > tempSp) || (kelembapan < humSp);
-    if (tidakAman) $('#status_aman').html('<span class="badge badge-tidak-aman">🚨 TIDAK AMAN (Pompa AKTIF atau harus AKTIF)</span>');
-    else $('#status_aman').html('<span class="badge badge-aman">✅ AMAN (Pompa MATI)</span>');
-}
-
-function loadChart() {
-    apiGet('get_logs', { limit: 100 }).then(res => {
-        if (res.success) {
-            let labels = [], suhuData = [], humData = [];
-            res.data.forEach(row => {
-                labels.push(new Date(row.created_at).toLocaleTimeString());
-                suhuData.push(row.suhu);
-                humData.push(row.kelembapan);
-            });
-            if (chart) chart.destroy();
-            const ctx = document.getElementById('sensorChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [
-                        { label: 'Suhu (°C)', data: suhuData, borderColor: 'red', fill: false, tension: 0.1 },
-                        { label: 'Kelembapan (%)', data: humData, borderColor: 'blue', fill: false, tension: 0.1 }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: true }
-            });
-        }
-    }).catch(console.error);
-}
-
-function loadSchedules() {
-    apiGet('get_schedules').then(res => {
-        if (res.success) {
-            let html = '';
-            res.data.forEach(s => {
-                let statusBadge = s.aktif ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Nonaktif</span>';
-                html += `<tr><td>${s.waktu}</td><td>${s.durasi} menit</td><td>${statusBadge}</td><td><button class="btn btn-sm btn-warning" onclick="editSchedule(${s.id},'${s.waktu}',${s.durasi},${s.aktif})">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteSchedule(${s.id})">Hapus</button></td></tr>`;
-            });
-            $('#scheduleList').html(html);
-        }
-    }).catch(console.error);
-}
-
-function loadControlMode() {
-    apiGet('get_control').then(res => {
-        if (res.success) {
-            currentMode = res.data.mode;
-            currentManualPump = parseInt(res.data.manual_pump_state);
-            updateManualUI();
-        }
-    }).catch(console.error);
-}
-
-// ==================== JADWAL ====================
-function openAddModal() {
-    $('#schedule_id').val('');
-    $('#waktu').val('');
-    $('#durasi').val('');
-    $('#aktif').prop('checked', true);
-    $('#scheduleModal').modal('show');
-}
-
-function editSchedule(id, waktu, durasi, aktif) {
-    $('#schedule_id').val(id);
-    $('#waktu').val(waktu);
-    $('#durasi').val(durasi);
-    $('#aktif').prop('checked', aktif == 1);
-    $('#scheduleModal').modal('show');
-}
-
-function deleteSchedule(id) {
-    if (confirm('Yakin hapus?')) {
-        apiPost('delete_schedule', { id: id }).then(res => {
-            if (res.success) loadSchedules();
-            else alert('Gagal');
-        }).catch(console.error);
-    }
-}
-
-$('#scheduleForm').on('submit', function(e) {
-    e.preventDefault();
-    let id = $('#schedule_id').val();
-    let waktu = $('#waktu').val();
-    let durasi = $('#durasi').val();
-    let aktif = $('#aktif').is(':checked') ? 1 : 0;
-    let action = id ? 'update_schedule' : 'add_schedule';
-    let postData = { action, waktu, durasi, aktif };
-    if (id) postData.id = id;
-    apiPost(action, postData).then(res => {
-        if (res.success) {
-            $('#scheduleModal').modal('hide');
-            loadSchedules();
-        } else alert('Gagal');
-    }).catch(console.error);
-});
-
-// ==================== KONTROL MANUAL ====================
-function updateManualUI() {
-    if (currentMode === 'manual') {
-        $('#mode-auto-btn').removeClass('active btn-primary').addClass('btn-outline-primary');
-        $('#mode-manual-btn').removeClass('btn-outline-warning').addClass('active btn-warning');
-        $('#manual-controls').show();
-        if (currentManualPump === 1) {
-            $('#pump-on-btn').removeClass('btn-outline-success').addClass('active btn-success');
-            $('#pump-off-btn').removeClass('active btn-danger').addClass('btn-outline-danger');
-            $('#manual-pump-label').text('ON').removeClass('text-danger').addClass('text-success');
-        } else {
-            $('#pump-on-btn').removeClass('active btn-success').addClass('btn-outline-success');
-            $('#pump-off-btn').removeClass('btn-outline-danger').addClass('active btn-danger');
-            $('#manual-pump-label').text('OFF').removeClass('text-success').addClass('text-danger');
-        }
-    } else {
-        $('#mode-auto-btn').addClass('active btn-primary').removeClass('btn-outline-primary');
-        $('#mode-manual-btn').removeClass('active btn-warning').addClass('btn-outline-warning');
-        $('#manual-controls').hide();
-        $('#manual-pump-label').text('(tidak aktif)');
-    }
-    $('#current-mode-label').text(currentMode === 'auto' ? 'Auto (sensor)' : 'Manual (override)');
-}
-
-function setControlMode(mode, manualState = null) {
-    let data = { action: 'set_control', mode: mode };
-    if (manualState !== null) data.manual_pump_state = manualState;
-    apiPost('set_control', data).then(res => {
-        if (res.success) {
-            currentMode = mode;
-            if (manualState !== null) currentManualPump = manualState;
-            updateManualUI();
-        } else alert('Gagal mengubah mode');
-    }).catch(console.error);
-}
-
-$('#mode-auto-btn').click(() => setControlMode('auto', 0));
-$('#mode-manual-btn').click(() => setControlMode('manual', currentManualPump));
-$('#pump-on-btn').click(() => setControlMode('manual', 1));
-$('#pump-off-btn').click(() => setControlMode('manual', 0));
-
-// ==================== SETPOINT ====================
-$('#form_setpoint').on('submit', function(e) {
-    e.preventDefault();
-    let temp = $('#temp_setpoint').val();
-    let hum = $('#hum_setpoint').val();
-    apiPost('update_settings', { temp_setpoint: temp, hum_setpoint: hum }).then(res => {
-        if (res.success) {
-            $('#setpoint_msg').html('<div class="alert alert-success">Setpoint disimpan</div>');
-            setTimeout(() => $('#setpoint_msg').empty(), 2000);
-        } else {
-            $('#setpoint_msg').html('<div class="alert alert-danger">Gagal</div>');
-        }
-    }).catch(console.error);
-});
-
-// ==================== REFRESH ====================
-function refreshAll() {
-    loadLatest();
-    loadChart();
-    loadSchedules();
-    loadControlMode();
-}
-
-loadSetpoint();
-refreshAll();
-setInterval(refreshAll, 5000);
-
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
